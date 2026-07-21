@@ -1,0 +1,14 @@
+[package]
+name = "sa-token-dao-memory"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Memory-based DAO implementation for sa-token-rs"
+
+[dependencies]
+sa-token-core.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

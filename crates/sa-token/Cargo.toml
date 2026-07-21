@@ -1,0 +1,21 @@
+[package]
+name = "sa-token"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Sa-Token-Rs: 轻量级权限认证框架"
+
+[features]
+default = []
+redis = ["dep:sa-token-dao-redis"]
+
+[dependencies]
+sa-token-core.workspace = true
+sa-token-derive.workspace = true
+sa-token-context-mock.workspace = true
+sa-token-dao-memory.workspace = true
+sa-token-dao-redis = { workspace = true, optional = true }
+
+[lints]
+workspace = true

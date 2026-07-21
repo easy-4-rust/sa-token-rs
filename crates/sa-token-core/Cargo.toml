@@ -1,0 +1,22 @@
+[package]
+name = "sa-token-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Core types and extension points for sa-token-rs"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+rand.workspace = true
+regex.workspace = true
+url.workspace = true
+base64.workspace = true
+
+[lints]
+workspace = true

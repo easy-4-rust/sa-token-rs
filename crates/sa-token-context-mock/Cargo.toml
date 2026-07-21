@@ -1,0 +1,13 @@
+[package]
+name = "sa-token-context-mock"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Mock context for sa-token-rs testing"
+
+[dependencies]
+sa-token-core.workspace = true
+
+[lints]
+workspace = true

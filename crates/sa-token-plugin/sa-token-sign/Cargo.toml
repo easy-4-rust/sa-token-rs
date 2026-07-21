@@ -1,0 +1,23 @@
+[package]
+name = "sa-token-sign"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "API signature verification plugin for sa-token-rs"
+
+[dependencies]
+sa-token-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+sha2.workspace = true
+hmac.workspace = true
+hex.workspace = true
+chrono.workspace = true
+
+[dev-dependencies]
+sa-token.workspace = true
+
+[lints]
+workspace = true

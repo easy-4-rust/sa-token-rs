@@ -1,0 +1,21 @@
+[package]
+name = "sa-token-demo-axum"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Axum demo for sa-token-rs"
+
+[dependencies]
+sa-token = { path = "../../sa-token" }
+sa-token-axum = { path = "../../sa-token-axum" }
+sa-token-dao-memory = { path = "../../sa-token-dao-memory" }
+sa-token-context-mock = { path = "../../sa-token-context-mock" }
+sa-token-jwt = { path = "../../sa-token-plugin/sa-token-jwt" }
+axum = { workspace = true, features = ["macros"] }
+tokio = { workspace = true, features = ["full"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,3 @@
+//! 配置模块（对应 Java `cn.dev33.satoken.config`）。
+pub mod sa_cookie_config;
+pub mod sa_token_config;
