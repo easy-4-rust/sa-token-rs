@@ -1,5 +1,12 @@
+<!--
+Sa-Token-Rs 注：本文档是 Sa-Token Java 的版本历史，
+本仓库（Sa-Token-Rs）当前仅发布 v0.1.0；
+Java 版历史仅作参考，已在以下章节中以 HTML 注释方式隐藏。
+-->
+
 # 更新日志 
 
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.45.0 @2026-3-8
 - core：
 	- 新增：新增重复登录处理策略，当同一账号不允许多客户端同时登录时支持选择踢人下线或拦截本次登录。  **[重要]** merge: [pr 349](https://gitee.com/dromara/sa-token/pulls/349)
@@ -74,6 +81,8 @@
 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.44.0 @2025-6-7
 
 - 修复：修复 sso-server 前后端分离示例无法正常登录的问题。
@@ -87,6 +96,8 @@
 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.43.0 @2025-5-17
 - core: 
 	- 新增：`SaLogoutParameter` 新增 `deviceId` 参数，用于控制指定设备 id 的注销。  **[重要]**
@@ -153,6 +164,8 @@
 								
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.42.0 @2025-4-11
 更新导读：[视频](https://www.bilibili.com/video/BV1h85izzEe8/)、[文字版](https://juejin.cn/post/7491971657201451062)
 
@@ -196,6 +209,8 @@
 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.41.0 @2025-3-21
 更新导读：[视频](https://www.bilibili.com/video/BV1aNo4YCEM1/)、[文字版](https://juejin.cn/post/7484191942358499368)
 
@@ -258,6 +273,8 @@
 	- 新增：新增设备锁登录示例。
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.40.0 @2025-2-1
 更新导读：[视频](https://www.bilibili.com/video/BV1uNATeeEvg/)、[文字版](https://juejin.cn/post/7467969744307306505)
 
@@ -303,6 +320,8 @@
 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.39.0 @2024-8-28
 - 核心：
 	- 升级：重构注解鉴权底层，支持自定义鉴权注解了。  **[重要]**
@@ -348,6 +367,8 @@
 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.38.0 @2024-5-12
 - sa-token-core：
 	- 修复：修复 `StpUtil.getSessionByLoginId(xx)` 参数为 null 时创建无效 `SaSession` 的 bug。
@@ -402,6 +423,8 @@
 	- 修复：补齐 `sa-token-spring-aop` 模块中遗漏监听的注解。
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.37.0 @2023-10-18
 - 修复：修复路由拦截鉴权可被绕过的问题。 **[漏洞修复]**
 - 重构：未登录时调用鉴权 API 抛出未登录异常而不再是无权限异常。
@@ -409,6 +432,8 @@
 - 文档：提供 SpringBoot3.x 路由匹配出错的解决方案。
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.36.0 @2023-9-22
 - sa-token-core：
 	- 修复：API接口签名校验参数接口NPE问题，增加必须参数的非空校验处理。
@@ -430,6 +455,8 @@
 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.35.0 @2023-6-23
 - sa-token-core：
 	- 优化：前端未提供 token 时，`getTokenSession()` 将抛出未登录异常，而不是返回 null。 **[不向下兼容]**
@@ -498,6 +525,8 @@
 	- `sa-token-context-grpc` -> `sa-token-grpc`。
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.34.0 @2023-1-11
 
 新增插件：
@@ -524,6 +553,8 @@ sa-token-sso 单点登录：
 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.33.0 @2022-11-16
 - 重构：重构异常状态码机制。   **[重要]**
 - 重构：重构 sa-token-sso 模块异常码改为 300 开头，sa-token-jwt 异常码改为 302 开头。  **[不向下兼容]**
@@ -535,6 +566,8 @@ sa-token-sso 单点登录：
 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.32.0 @2022-10-28
 - 修复：修复 sa-token-dao-redis-fastjson 插件多余序列化 `timeout` 字段的问题。
 - 修复：修复 sa-token-dao-redis-fastjson 插件 `session.getModel` 无法反序列化实体类的问题。
@@ -575,6 +608,8 @@ sa-token-sso 单点登录：
 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.31.0 @2022-9-8
 - 文档：新增优秀开源案例展示。
 - 文档：新增博客展示，欢迎大家投稿。 
@@ -614,6 +649,8 @@ sa-token-sso 单点登录：
 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.30.0 @2022-05-9
 - 新增：新增集成 Web-Socket 鉴权示例。 **[重要]**
 - 新增：新增集成 Web-Socket（Spring封装版） 鉴权示例。
@@ -659,6 +696,8 @@ sa-token-sso 单点登录：
 	- 修复：修复 `StpLogicJwtForSimple` 模式下 Extra 数据可能受到旧 token 影响的bug
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.29.0 @2022-02-10
 - 升级：sa-token-jwt插件可在登录时添加额外数据。
 - 重构：优化Dubbo调用时向下传递Token的规则，可避免在项目启动时由于Context无效引发的bug。
@@ -681,6 +720,8 @@ sa-token-sso 单点登录：
 - 完善：完善单元测试。
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.28.0 @2021-11-5
 - 新增：新增 `sa-token-jwt` 插件，用于与jwt的整合 **[重要]**
 - 新增：新增 `sa-token-context-dubbo` 插件，用于与 Dubbo 的整合 **[重要]**
@@ -695,6 +736,8 @@ sa-token-sso 单点登录：
 - 文档：新增常见问题总结
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.27.0 @2021-10-11
 - 升级：增强 SaRouter 链式匹配能力  	**[重要]**  	
 - 新增：新增插件 Thymeleaf 标签方言   **[重要]**  	
@@ -720,6 +763,8 @@ sa-token-sso 单点登录：
 	- [不向下兼容] 侦听器 doLogoutByLoginId 方法重命名为 doKickout  
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.26.0 @2021-9-2
 - 优化：优化单点登录文档 
 - 新增：新增 `Http Basic` 认证 **[重要]** 
@@ -729,6 +774,8 @@ sa-token-sso 单点登录：
 - 示例：新增 `SSO-Server` 端前后端分离示例  **[重要]** 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.25.0 @2021-8-16
 - 新增：`SaRequest`新增`getHeader(name, defaultValue)`方法，用于获取header默认值 
 - 新增：`SaRequest` 添加 `forward` 转发方法  
@@ -749,6 +796,8 @@ sa-token-sso 单点登录：
 	- 重构：修复 `SaReactorHolder.getContent()` 拼写错误：`content` -> `context` 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.24.0 @2021-7-24
 - 修复：修复部分场景下Alone-Redis插件导致项目无法启动的问题
 - 优化：增加对SpringBoot1.x版本的兼容性 
@@ -759,6 +808,8 @@ sa-token-sso 单点登录：
 - 优化：大幅度优化文档示例 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.23.0 @2021-7-19
 - 新增：Sa-Token-OAuth2 模块正式发布   **[重要]** 
 - 修复：修复jwt集成demo无法正确注册StpLogic的bug
@@ -766,6 +817,8 @@ sa-token-sso 单点登录：
 - 优化：代码注释优化，文档优化  
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.22.0 @2021-7-10
 - 新增：SaSsoConfig 部分属性增加set连缀风格 
 - 优化：SaSsoUtil 可定制化底层的 `StpLogic`
@@ -775,6 +828,8 @@ sa-token-sso 单点登录：
 - 优化：大幅度优化文档示例 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.21.0 @2021-7-2
 - 新增：新增Token二级认证 	**[重要]** 
 - 新增：新增`Sa-Token-Alone-Redis`独立Redis插件   **[重要]**  
@@ -785,6 +840,8 @@ sa-token-sso 单点登录：
 	- 更改yml配置前缀：原`[spring.sa-token.]` 改为 `[sa-token.]`，目前版本暂时向下兼容，请尽快更新 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.20.0 @2021-6-17
 - 新增：新增Solon适配插件，感谢大佬 `@刘西东` 提供的pr **[重要]** 
 - 新增：新增`SaRouter.stop()`函数，用于一次性跳出匹配链功能 **[重要]** 
@@ -806,6 +863,8 @@ sa-token-sso 单点登录：
 	- 为保证平滑更新，旧API仍旧保留，但已增加`@Deprecated`注解，请尽快更新至新API  
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.19.0 @2021-5-10
 - 新增：注解鉴权新增定制loginType功能  **[重要]** 
 - 重构：重构目录结构，抽离`plugin`模块  **[重要]** 
@@ -814,6 +873,8 @@ sa-token-sso 单点登录：
 - 优化：文档优化... 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.18.0 @2021-4-24
 - 新增：新增权限通配符功能，灵活设置权限  **[重要]** 
 - 修复：修复自动续签处的逻辑错误 
@@ -827,6 +888,8 @@ sa-token-sso 单点登录：
 - 重构：`SaTokenInsideUtil` -> `SaFoxUtil` 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.17.0 @2021-4-17
 - 修复：在WebFlux环境中引入Redis集成包无法启动的问题 
 - 修复：修复JWT集成示例中版本升级API的变更 
@@ -838,6 +901,8 @@ sa-token-sso 单点登录：
 - 新增：新增全局侦听器，可在用户登陆、注销、被踢下线等关键性操作时进行一些AOP操作 **[重要]** 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.16.0 @2021-4-12
 - 新增：新增账号封禁功能，指定时间内账号无法登陆 			**[重要]**
 - 新增：核心包脱离`ServletAPI`，彻底零依赖！  				**[重要]**
@@ -849,6 +914,8 @@ sa-token-sso 单点登录：
 - 文档：新增推荐公众号列表 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.15.0 @2021-3-23
 - 新增：文档添加源码涉及技术栈说明 
 - 优化：优化路由拦截器模块文档，更简洁的示例
@@ -869,6 +936,8 @@ sa-token-sso 单点登录：
 	- `SaRouteInterceptor`去出冗余API，详情参考路由鉴权部分
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.14.0 @2021-3-12
 - 新增：新增`SaLoginModel`登录参数Model，适配 [记住我] 模式	 **[重要]**
 - 新增：新增 `StpUtil.login()` 时指定token有效期，可灵活控制用户的一次登录免验证时长 
@@ -887,6 +956,8 @@ sa-token-sso 单点登录：
 - 文档：优化文档，部分模块添加图片说明 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.13.0 @2021-2-9
 - 优化：优化源码注释与文档
 - 新增：文档集成Gitalk评论系统 
@@ -902,6 +973,8 @@ sa-token-sso 单点登录：
 - 新增：完善分布式会话的文档说明
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.12.0 @2021-1-12
 - 新增：提供JWT集成示例 **[重要]**
 - 新增：新增路由式鉴权，可方便的根据路由匹配鉴权  **[重要]**
@@ -911,22 +984,30 @@ sa-token-sso 单点登录：
 - 升级：v1.12.1，新增`SaRouterUtil`工具类，更方便的路由鉴权   **[重要]**
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.11.0 @2021-1-10
 - 新增：提供AOP注解鉴权方案 **[重要]**
 - 优化自动生成token的算法
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.10.0 @2021-1-9
 - 新增：提供查询所有会话方案  **[重要]**
 - 修复：修复token设置为永不过期时无法正常被顶下线的bug，感谢github用户 @zjh599245299 提出的bug
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.9.0 @2021-1-6
 - 优化：`spring-boot-starter-data-redis` 由 `2.3.7.RELEASE` 改为 `2.3.3.RELEASE` 
 - 修复：补上注解拦截器里漏掉验证`@SaCheckRole`的bug
 - 新增：新增同端互斥登录，像QQ一样手机电脑同时在线，但是两个手机上互斥登录  **[重要]**
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.8.0 @2021-1-2
 - 优化：优化源码注释
 - 修复：修复部分文档错别字 
@@ -946,6 +1027,8 @@ sa-token-sso 单点登录：
 - 升级：开源协议修改为`Apache-2.0`
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.7.0 @2020-12-24
 - 优化：项目架构改为maven多模块形式，方便增加新模块 **[重要]**
 - 优化：与`springboot`的集成改为`springboot-starter`模式，无需`@SaTokenSetup`注解即可完成自动装配 **[重要]**
@@ -956,12 +1039,16 @@ sa-token-sso 单点登录：
 - 修复：修复文档首页样式问题 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.6.0 @2020-12-17
 - 新增：花式token生成方案 **[重要]** 
 - 优化：优化`readme.md` 
 - 修复：修复`SaCookieOper`与`SaTokenAction`无法自动注入的问题 
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.5.1 @2020-12-16
 - 新增：细化未登录异常类型，提供五种场景值：未提供token、token无效、token已过期 、token已被顶下线、token已被踢下线 **[重要]**
 - 修复：修复`StpUtil.getSessionByLoginId(String loginId)`方法转换key出错的bug，感谢群友 @(＃°Д°)、@一米阳光 发现的bug 
@@ -976,6 +1063,8 @@ sa-token-sso 单点登录：
 - 升级：开源协议修改为`MIT`
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.4.0 @2020-9-7
 - 优化：修改一些函数、变量名称，使其更符合阿里java代码规范
 - 优化：`tokenValue`的读取优先级改为：`request` > `body` > `header` > `cookie`  **[重要]**
@@ -985,6 +1074,8 @@ sa-token-sso 单点登录：
 - 修复：修复文档部分错误，修正群号码
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.3.0 @2020-5-2
 - 新增：新增 `StpUtil.checkLogin()` 方法，更符合语义化的鉴权方法
 - 新增：注册拦截器时可设置 `StpLogic` ，方便不同模块不同鉴权方式
@@ -994,14 +1085,22 @@ sa-token-sso 单点登录：
 - 新增：新增文档的友情链接
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.2.0 @2020-3-7
 - 新增：新增注解式验证，可在路由方法中使用注解进行权限验证  **[重要]**
 - 参考：[注解式验证](use/at-check)
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.1.0 @2020-2-12
 - 修复：修复`StpUtil.getLoginId(T defaultValue)`取值转换错误的bug
 
 
+-->
+<!-- Sa-Token Java 版本历史章节：已隐藏
 ### v1.0.0 @2020-2-4
 - 第一个版本出炉 
+
+-->

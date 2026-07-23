@@ -158,7 +158,7 @@ private void configSso(SaSsoClientConfig ssoClient) {
 
 在模式二中我们只需要将需要同步的资料放到 SaSession 即可，但是在模式三中两端不再连接同一个 Redis，这时候我们需要通过 http 接口来同步信息。
 
-在旧版本`（<= v1.34.0）` 框架提供的方案是配置 getUserinfo 接口地址，从 client 调用拉取数据，该方案有以下缺点：
+在旧版本`（<!-- <= v1.34.0 -->）` 框架提供的方案是配置 getUserinfo 接口地址，从 client 调用拉取数据，该方案有以下缺点：
 - 每次调用只能传递固定 loginId 一个参数，不方便。
 - 只能拉取 userinfo 数据，不通用。
 - 如果还需要拉取其它业务数据，需要再自定义一个接口，比较麻烦。

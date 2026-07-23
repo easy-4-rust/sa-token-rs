@@ -107,5 +107,5 @@ SaManager.getSaTokenContext().setContext(req, res, stg);
 
 
 ### 旧版本方案
-在旧版本中（< v1.42.0）我们推荐的方案是自定义整个 `SaTokenCentext` 接口，目前此方案在新版本已不推荐，此处仅做留档备份：[自定义 SaTokenContext 指南](/fun/sa-token-context--backup.md)
+在旧版本中（<!-- < v1.42.0 -->）我们推荐的方案是自定义整个 `SaTokenCentext` 接口，目前此方案在新版本已不推荐，此处仅做留档备份：[自定义 SaTokenContext 指南](/fun/sa-token-context--backup.md)
 
