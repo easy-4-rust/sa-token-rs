@@ -2,34 +2,61 @@
 
 本篇介绍token生成的各种风格，以及自定义token生成策略。
 
+> Sa-Token → Sa-Token-Rs；配置字段 `token_style: SaTokenStyle::...`
+
+| Java | Rust |
+|---|---|
+| `sa-token.token-style=uuid` | `token_style: SaTokenStyle::Uuid` |
+| `SaStrategy.instance.createToken = ...` | 自定义策略 / 策略钩子（以实现为准，见 `SaStrategy`） |
+
 --- 
 
 
 ## 内置风格
 
-Sa-Token 默认的 token 生成策略是 uuid 风格，其模样类似于：`623368f0-ae5e-4475-a53f-93e4225f16ae`。<br>
+Sa-Token-Rs 默认的 token 生成策略是 uuid 风格，其模样类似于：`623368f0-ae5e-4475-a53f-93e4225f16ae`。<br>
 如果你对这种风格不太感冒，还可以将 token 生成设置为其他风格。
 
-怎么设置呢？只需要在yml配置文件里设置 `sa-token.token-style=风格类型` 即可，其有多种取值： 
+怎么设置呢？在 `SaTokenConfig` 中设置 `token_style` 即可，其有多种取值： 
 
-``` java
-// 1. token-style=uuid    —— uuid风格 (默认风格)
-"623368f0-ae5e-4475-a53f-93e4225f16ae"
+``` rust
+use sa_token::prelude::*;
 
-// 2. token-style=simple-uuid    —— 同上，uuid风格, 只不过去掉了中划线
-"6fd4221395024b5f87edd34bc3258ee8"
+// 1. Uuid    —— uuid风格 (默认风格)
+// "623368f0-ae5e-4475-a53f-93e4225f16ae"
+SaTokenStyle::Uuid;
 
-// 3. token-style=random-32    —— 随机32位字符串
-"qEjyPsEA1Bkc9dr8YP6okFr5umCZNR6W"
+// 2. SimpleUuid    —— 同上，uuid风格, 只不过去掉了中划线
+// "6fd4221395024b5f87edd34bc3258ee8"
+SaTokenStyle::SimpleUuid;
 
-// 4. token-style=random-64    —— 随机64位字符串
-"v4ueNLEpPwMtmOPMBtOOeIQsvP8z9gkMgIVibTUVjkrNrlfra5CGwQkViDjO8jcc"
+// 3. Random32    —— 随机32位字符串
+// "qEjyPsEA1Bkc9dr8YP6okFr5umCZNR6W"
+SaTokenStyle::Random32;
 
-// 5. token-style=random-128    —— 随机128位字符串
-"nojYPmcEtrFEaN0Otpssa8I8jpk8FO53UcMZkCP9qyoHaDbKS6dxoRPky9c6QlftQ0pdzxRGXsKZmUSrPeZBOD6kJFfmfgiRyUmYWcj4WU4SSP2ilakWN1HYnIuX0Olj"
+// 4. Random64    —— 随机64位字符串
+SaTokenStyle::Random64;
 
-// 6. token-style=tik    —— tik风格
-"gr_SwoIN0MC1ewxHX_vfCW3BothWDZMMtx__"
+// 5. Random128    —— 随机128位字符串
+SaTokenStyle::Random128;
+
+// 6. Tik    —— tik风格
+// "gr_SwoIN0MC1ewxHX_vfCW3BothWDZMMtx__"
+SaTokenStyle::Tik;
+
+// 另有 Base64 / Jwt 等，见源码枚举
+```
+
+配置示例：
+
+``` rust
+use std::sync::Arc;
+use sa_token::prelude::*;
+
+SaManager::set_config(Arc::new(SaTokenConfig {
+    token_style: SaTokenStyle::Random32,
+    ..Default::default()
+}));
 ```
 
 
@@ -37,32 +64,40 @@ Sa-Token 默认的 token 生成策略是 uuid 风格，其模样类似于：`623
 
 如果你觉着以上风格都不是你喜欢的类型，那么你还可以**自定义token生成策略**，来定制化token生成风格。 <br>
 
-怎么做呢？只需要重写 `SaStrategy` 策略类的 `createToken` 算法即可：
+怎么做呢？只需要重写 / 注册 `SaStrategy` 策略中的 `create_token` 算法即可（具体字段名以实现为准）：
 
 
 #### 参考步骤如下：
-1、在`SaTokenConfigure`配置类中添加代码：
-``` java 
-@Configuration
-public class SaTokenConfigure {
-    /**
-     * 重写 Sa-Token 框架内部算法策略 
-     */
-    @PostConstruct
-    public void rewriteSaStrategy() {
-    	// 重写 Token 生成策略 
-    	SaStrategy.instance.createToken = (loginId, loginType) -> {
-    		return SaFoxUtil.getRandomString(60);	// 随机60位长度字符串
-    	};
-    }
+1、在初始化代码中注册策略：
+``` rust
+use sa_token::prelude::*;
+
+/// 重写 Sa-Token-Rs 框架内部算法策略（示意）
+fn rewrite_sa_strategy() {
+    // 参考 Java：
+    // SaStrategy.instance.createToken = (loginId, loginType) -> SaFoxUtil.getRandomString(60);
+    //
+    // Rust：请查阅 sa-token-core 中 SaStrategy 的注册方式，设置为自定义闭包/实现，
+    // 返回随机 60 位长度字符串等。
 }
 ```
 
-2、再次调用 `StpUtil.login(10001)`方法进行登录，观察其生成的token样式:
+Java 对照：
+
 ``` java
-gfuPSwZsnUhwgz08GTCH4wOgasWtc3odP4HLwXJ7NDGOximTvT4OlW19zeLH
+@PostConstruct
+public void rewriteSaStrategy() {
+	SaStrategy.instance.createToken = (loginId, loginType) -> {
+		return SaFoxUtil.getRandomString(60);
+	};
+}
 ```
 
-> [!WARNING| label:更改了 token 生成策略但是不生效？] 
-> 把 Redis 中的旧数据清除掉再试试
+2、再次调用 `StpUtil::login("10001")` 方法进行登录，观察其生成的token样式:
+``` rust
+// 例如：
+// gfuPSwZsnUhwgz08GTCH4wOgasWtc3odP4HLwXJ7NDGOximTvT4OlW19zeLH
+```
 
+> [!WARNING| label:更改了 token 生成策略但是不生效？]
+> 把 Redis / 内存中的旧数据清除掉再试试

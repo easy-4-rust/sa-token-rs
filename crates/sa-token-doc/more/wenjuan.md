@@ -1,5 +1,8 @@
 # 问卷调查
 
-我们想以运营一款产品的心态来运营一个开源框架，所以我们迫切希望您能够填写这份问卷，这有6道选择题，应该只会略微占用您1-3分钟的时间，Sa-Token将会非常重视每一位粉丝的宝贵意见！
-
-[https://wj.qq.com/s2/14587150/b5b4/](https://wj.qq.com/s2/14587150/b5b4/)
+> 本文档（`more/wenjuan.md`）原本属于 Sa-Token Java 文档站的 Sa-Token Java 问卷调查推广。
+>
+> Sa-Token-Rs 项目独立运营，**暂不展示这些推广信息**。
+> 原内容已存档于 [Sa-Token Java 官方文档](https://sa-token.cc/)。
+>
+> 如需联系 Sa-Token-Rs 团队，请通过 GitHub Issues：https://github.com/easy-4-rust/sa-token-rs/issues

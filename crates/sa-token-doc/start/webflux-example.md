@@ -1,204 +1,156 @@
-# Spring WebFlux 集成 Sa-Token 示例
+# axum 异步场景集成 Sa-Token-Rs 示例
 
-**Reactor** 是一种非阻塞的响应式模型，本篇将以 **WebFlux** 为例，展示 Sa-Token 与 Reactor 响应式模型框架相整合的示例，
-**你可以用同样方式去对接其它 Reactor 模型框架（例如 SpringCloud Gateway）**
+> Java 原文对应：`Spring WebFlux 集成 Sa-Token 示例`  
+> 框架映射：**WebFlux / Reactor → axum + tokio**
 
-整合示例在官方仓库的`/sa-token-demo/sa-token-demo-webflux`文件夹下，如遇到难点可结合源码进行测试学习。[Sa-Token 集成示例大全下载](/more/download-demos) 。
+**tokio** 是 Rust 主流异步运行时，本篇以 **axum** 为例，展示 Sa-Token-Rs 在异步 Web 中的整合方式。  
+**你可以用同样思路对接其它异步框架（例如 tower 中间件栈、网关层等）。**
 
+整合示例在官方仓库的 `crates/sa-token-demo/sa-token-demo-axum-async` 文件夹下，如遇到难点可结合源码进行测试学习。[Sa-Token-Rs 集成示例大全](/more/download-demos) 。
 
-> [!WARNING| label:小提示 ] 
-> WebFlux 常用于微服务网关架构中，如果您的应用基于单体架构且非 Reactor 模型，可以先跳过本章  
+| Java | Rust |
+|---|---|
+| WebFlux + Reactor | axum + tokio |
+| `sa-token-reactor-spring-boot-starter` | `sa-token-web-axum` |
+| `SaReactorFilter` | `SaTokenLayer` |
+| `Mono` / `Flux` | `async fn` + `SaResult` |
+
+> [!WARNING| label:小提示 ]
+> WebFlux 常用于微服务网关架构中，如果您的应用基于单体架构且非异步模型，可以先跳过本章；日常 axum 同步门面 `StpUtil` 也可在 `async fn` 中直接调用。
 
 
 ---
 
 ### 1、创建项目
-在 IDE 中新建一个 SpringBoot 项目，例如：`sa-token-demo-webflux`
+
+使用 Cargo 新建一个项目，例如：`sa-token-demo-axum-async`
+
+```bash
+cargo new sa-token-demo-axum-async --bin
+```
 
 
 ### 2、添加依赖
+
 在项目中添加依赖：
 
 <!---------------------------- tabs:start ------------------------------>
-<!-------- tab:Maven 方式 -------->
-``` xml 
-<!-- Sa-Token 权限认证（Reactor响应式集成），在线文档：https://sa-token.cc -->
+<!-------- tab:Cargo.toml -------->
+``` toml
+[dependencies]
+# Sa-Token-Rs 权限认证（异步 Web 集成），对应 Java reactor starter
+sa-token = "0.1"
+sa-token-web-axum = "0.1"
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+```
+
+<!-------- tab:Java 对照（Maven） -------->
+``` xml
+<!-- 以下为 Java 原版，仅作对照 -->
 <dependency>
 	<groupId>cn.dev33</groupId>
 	<artifactId>sa-token-reactor-spring-boot-starter</artifactId>
 	<version>${sa.top.version}</version>
 </dependency>
 ```
-- 如果你使用的 `SpringBoot 3.x`，请引入 `sa-token-reactor-spring-boot3-starter`。
-- 如果你使用的 `SpringBoot 4.x`，请引入 `sa-token-reactor-spring-boot4-starter`。
-
-<!-------- tab:Gradle 方式 -------->
-``` gradle
-// Sa-Token 权限认证（Reactor响应式集成），在线文档：https://sa-token.cc
-implementation 'cn.dev33:sa-token-reactor-spring-boot-starter:${sa.top.version}'
-```
-- 如果你使用的 `SpringBoot 3.x`，请引入 `sa-token-reactor-spring-boot3-starter`。
-- 如果你使用的 `SpringBoot 4.x`，请引入 `sa-token-reactor-spring-boot4-starter`。
-
-<!-------- tab:Gradle (Kotlin) 方式 -------->
-``` gradle
-// Sa-Token 权限认证（Reactor响应式集成），在线文档：https://sa-token.cc
-implementation("cn.dev33:sa-token-reactor-spring-boot-starter:${sa.top.version}")
-```
-- 如果你使用的 `SpringBoot 3.x`，请引入 `sa-token-reactor-spring-boot3-starter`。
-- 如果你使用的 `SpringBoot 4.x`，请引入 `sa-token-reactor-spring-boot4-starter`。
 <!---------------------------- tabs:end ------------------------------>
 
 
 
 
 
-### 3、创建启动类
-在项目中新建包 `com.pj` ，在此包内新建主类 `SaTokenDemoApplication.java`，输入以下代码：
+### 3、创建启动入口
 
-<!---------------------------- tabs:start ------------------------------>
-<!-------- tab:Java -------->
-``` java
-@SpringBootApplication
-public class SaTokenDemoApplication {
-	public static void main(String[] args) throws JsonProcessingException {
-		SpringApplication.run(SaTokenDemoApplication.class, args);
-		System.out.println("启动成功，Sa-Token 配置如下：" + SaManager.getConfig());
-	}
+在 `src/main.rs` 写入：
+
+``` rust
+use std::sync::Arc;
+use axum::{routing::get, Router};
+use sa_token::prelude::*;
+use sa_token_web_axum::SaTokenLayer;
+
+#[tokio::main]
+async fn main() {
+    SaManager::set_config(Arc::new(SaTokenConfig::default()));
+    SaManager::set_sa_token_dao(Arc::new(SaTokenDaoMemory::new()));
+    SaManager::put_stp_logic(Arc::new(StpLogic::new("login")));
+
+    let app = Router::new()
+        .route("/user/doLogin", get(do_login))
+        .route("/user/isLogin", get(is_login))
+        .layer(SaTokenLayer::new());
+
+    println!("启动成功，Sa-Token-Rs 已初始化");
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8081").await.unwrap();
+    axum::serve(listener, app).await.unwrap();
 }
 ```
 
-<!-------- tab:Kotlin -------->
-```kotlin
-@SpringBootApplication
-class SaTokenDemoApplication
 
-fun main(args: Array<String>) {
-    runApplication<SaTokenDemoApplication>(*args)
-    println(SaManager.getConfig())
-}
-```
-<!---------------------------- tabs:end ------------------------------>
+### 4、创建全局 Layer（对应全局过滤器）
 
+新建配置模块，注册 Sa-Token-Rs 的全局 Layer（对应 Java `SaReactorFilter`）：
 
-### 4、创建全局过滤器
-新建`SaTokenConfigure.java`，注册 Sa-Token 的全局过滤器
+``` rust
+use axum::Router;
+use sa_token_web_axum::SaTokenLayer;
 
-<!---------------------------- tabs:start ------------------------------>
-<!-------- tab:Java -------->
-``` java
-/**
- * [Sa-Token 权限认证] 全局配置类 
- */
-@Configuration
-public class SaTokenConfigure {
-	/**
-     * 注册 [Sa-Token全局过滤器] 
-     */
-    @Bean
-    public SaReactorFilter getSaReactorFilter() {
-        return new SaReactorFilter()
-        		// 指定 [拦截路由]
-        		.addInclude("/**")    /* 拦截所有path */
-        		// 指定 [放行路由]
-        		.addExclude("/favicon.ico")
-        		// 指定[认证函数]: 每次请求执行 
-        		.setAuth(obj -> {
-        			System.out.println("---------- sa全局认证");
-                    // SaRouter.match("/test/test", () -> StpUtil.checkLogin());
-        		})
-        		// 指定[异常处理函数]：每次[认证函数]发生异常时执行此函数 
-        		.setError(e -> {
-        			System.out.println("---------- sa全局异常 ");
-        			return SaResult.error(e.getMessage());
-        		})
-        		;
-    }
+/// 注册 [Sa-Token-Rs 全局 Layer]
+/// 对应 Java SaReactorFilter：拦截路由 / 放行路由 / 认证函数 / 异常处理
+fn with_sa_token_layer(router: Router) -> Router {
+    router.layer(SaTokenLayer::new())
+    // 更细的路由放行：把公开接口放在未包裹 require 的分支上
+    // 更细的鉴权：在 handler 内 StpUtil::check_login()? 或使用注解宏
 }
 ```
 
-<!-------- tab:Kotlin -------->
-```kotlin
-@Configuration
-class SaTokenConfigure {
-    /**
-     * 注册 [Sa-Token全局过滤器]
-     */
-    @Bean
-    fun saReactorFilter(): SaReactorFilter = SaReactorFilter()
-        // 指定 [拦截路由]（此处为拦截所有path）
-        .addInclude("/**")
-        // 指定 [放行路由]
-        .addExclude("/favicon.ico")
-        // 指定[认证函数]: 每次请求执行
-        .setAuth {
-            println("---------- sa全局认证")
-            // SaRouter.match("/test/test", SaFunction { StpUtil.checkLogin() })
-        }
-        // 指定[异常处理函数]：每次[认证函数]发生异常时执行此函数
-        .setError { e: Throwable ->
-            println("---------- sa全局异常 ")
-            SaResult.error(e.message)
-        }
-}
-```
-<!---------------------------- tabs:end ------------------------------>
+| Java `SaReactorFilter` | Rust |
+|---|---|
+| `addInclude("/**")` | 整棵 Router 加 `SaTokenLayer` |
+| `addExclude("/favicon.ico")` | 静态资源路由不加鉴权中间件 |
+| `setAuth(...)` | handler / middleware 内 `check_*` |
+| `setError(...)` | axum `IntoResponse` / 错误映射 |
 
 你只需要按照此格式复制代码即可，有关过滤器的详细用法，会在之后的章节详细介绍。
 
 
-### 5、创建测试Controller
+### 5、创建测试 Handler（对应 Controller）
 
-<!---------------------------- tabs:start ------------------------------>
-<!-------- tab:Java -------->
-``` java
-@RestController
-@RequestMapping("/user/")
-public class UserController {
+``` rust
+use axum::extract::Query;
+use sa_token::prelude::*;
+use std::collections::HashMap;
 
-	// 测试登录，浏览器访问： http://localhost:8081/user/doLogin?username=zhang&password=123456
-	@RequestMapping("doLogin")
-	public String doLogin(String username, String password) {
-		// 此处仅作模拟示例，真实项目需要从数据库中查询数据进行比对 
-		if("zhang".equals(username) && "123456".equals(password)) {
-			StpUtil.login(10001);
-			return "登录成功";
-		}
-		return "登录失败";
-	}
+// 测试登录，浏览器访问： http://localhost:8081/user/doLogin?username=zhang&password=123456
+async fn do_login(Query(params): Query<HashMap<String, String>>) -> String {
+    let username = params.get("username").map(|s| s.as_str()).unwrap_or("");
+    let password = params.get("password").map(|s| s.as_str()).unwrap_or("");
+    // 此处仅作模拟示例，真实项目需要从数据库中查询数据进行比对
+    if username == "zhang" && password == "123456" {
+        let _ = StpUtil::login("10001");
+        "登录成功".into()
+    } else {
+        "登录失败".into()
+    }
+}
 
-	// 查询登录状态，浏览器访问： http://localhost:8081/user/isLogin
-	@RequestMapping("isLogin")
-	public String isLogin() {
-		return "当前会话是否登录：" + StpUtil.isLogin();
-	}
-	
+// 查询登录状态，浏览器访问： http://localhost:8081/user/isLogin
+async fn is_login() -> String {
+    format!(
+        "当前会话是否登录：{}",
+        StpUtil::is_login().unwrap_or(false)
+    )
 }
 ```
 
-<!-------- tab:Kotlin -------->
-```kotlin
-@RestController
-@RequestMapping("/user/")
-class UserController {
-    
-    @RequestMapping("doLogin")
-    fun doLogin(username: String, password: String) =
-        // 此处仅作模拟示例，真实项目需要从数据库中查询数据进行比对
-        if ("zhang" == username && "123456" == password) {
-            StpUtil.login(10001)
-            "登录成功"
-        } else "登录失败"
-    
-    @RequestMapping("isLogin")
-    fun isLogin() = "当前会话是否登录：" + StpUtil.isLogin()
-    
-}
-```
-
-<!---------------------------- tabs:end ------------------------------>
 ### 6、运行
-启动代码，从浏览器依次访问上述测试接口：
+
+```bash
+cargo run -p sa-token-demo-axum-async
+```
+
+从浏览器依次访问上述测试接口：
 
 <img src="/big-file/doc/start/test-do-login.png" alt="运行结果">
 
@@ -207,7 +159,4 @@ class UserController {
 
 **注意事项：**
 
-更多使用示例请参考官方仓库demo
-
-
-
+更多使用示例请参考官方仓库 demo（含 `AsyncStpUtil` 的完整异步门面用法）。
