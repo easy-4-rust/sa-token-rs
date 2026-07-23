@@ -1,0 +1,17 @@
+[package]
+name = "sa-token-doc"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+description = "Sa-Token-Rs Docsify documentation (static site; not a runtime library)"
+readme = "README.md"
+
+# 本包仅承载 Markdown / 静态资源，不参与业务编译。
+# 预览：npx docsify-cli serve crates/sa-token-doc -p 3000
+# 适配说明见 DOC_ADAPTATION.md
+
+[lib]
+path = "src/lib.rs"
