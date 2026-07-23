@@ -220,9 +220,9 @@ Handler 函数
        │              │     │
        │              │  ┌──▼──────────────────────────────────┐
        │              │  │  Web 框架适配 / 插件                  │
-       │              │  │  starter/sa-token-axum               │
-       │              │  │  starter/sa-token-actix-web          │
-       │              │  │  starter/sa-token-salvo              │
+       │              │  │  web/sa-token-web-axum                   │
+       │              │  │  web/sa-token-web-actix              │
+       │              │  │  web/sa-token-web-salvo                  │
        │              │  │  plugin/sa-token-jwt                 │
        │              │  │  plugin/sa-token-sign                │
        │              │  │  plugin/sa-token-oauth2              │
@@ -236,7 +236,7 @@ Handler 函数
 **依赖方向原则**：
 - `sa-token-core` 是底层基础，**不依赖**任何其他 workspace crate
 - `sa-token-derive` 仅在 dev-dependencies 引 core
-- 所有 dao/starter/plugin 都依赖 core
+- 所有 dao / web / plugin 都依赖 core
 - facade `sa-token` 依赖全部
 
 ---
@@ -248,7 +248,7 @@ Handler 函数
 所有 Web 框架适配基于 `tower::Layer`：
 
 ```rust
-// sa-token-axum
+// sa-token-web-axum
 pub struct SaTokenAxumLayer { /* config */ }
 impl<S> Layer<S> for SaTokenAxumLayer { ... }
 

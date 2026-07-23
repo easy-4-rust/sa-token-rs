@@ -27,6 +27,9 @@ pub const SESSION_TYPE_LOGIN: &str = "login";
 /// Session 类型：Token 会话
 pub const SESSION_TYPE_TOKEN: &str = "token";
 
+/// Session 类型：匿名 Token 会话（对应 Java `SESSION_TYPE__ANON`）
+pub const SESSION_TYPE_ANON: &str = "Anon-Token-Session";
+
 /// Session 常量：用户数据 key
 pub const SESSION_KEY_USER: &str = "USER";
 
@@ -44,3 +47,35 @@ pub const NEVER_EXPIRE: i64 = -1;
 
 /// 值不存在时的过期时间标记
 pub const NOT_VALUE_EXPIRE: i64 = -2;
+
+/// 默认禁用服务标识（对应 Java `SaTokenConsts.DEFAULT_DISABLE_SERVICE`）
+pub const DEFAULT_DISABLE_SERVICE: &str = "login";
+
+/// 默认封禁等级（对应 Java `SaTokenConsts.DEFAULT_DISABLE_LEVEL`）
+pub const DEFAULT_DISABLE_LEVEL: i32 = 1;
+
+/// 阶梯封禁最低等级（对应 Java `SaTokenConsts.MIN_DISABLE_LEVEL`）
+pub const MIN_DISABLE_LEVEL: i32 = 1;
+
+/// 未封禁等级标记（对应 Java `SaTokenConsts.NOT_DISABLE_LEVEL`）
+pub const NOT_DISABLE_LEVEL: i32 = -2;
+
+/// 默认二级认证服务标识（对应 Java `SaTokenConsts.DEFAULT_SAFE_AUTH_SERVICE`）
+pub const DEFAULT_SAFE_AUTH_SERVICE: &str = "important";
+
+/// Http Basic/Digest 默认 realm（对应 Java `SaHttpBasicTemplate.DEFAULT_REALM`）
+pub const DEFAULT_HTTP_AUTH_REALM: &str = "Sa-Token";
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn core_consts_match_java_defaults() {
+        assert_eq!(DEFAULT_TOKEN_NAME, "satoken");
+        assert_eq!(DEFAULT_TIMEOUT, 60 * 60 * 24 * 30);
+        assert_eq!(NEVER_EXPIRE, -1);
+        assert_eq!(NOT_VALUE_EXPIRE, -2);
+        assert_eq!(DEFAULT_DISABLE_SERVICE, "login");
+    }
+}

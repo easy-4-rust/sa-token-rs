@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `#[sa_ignore]`
 
 #### Phase 3: Web 框架适配
-- `sa-token-axum` — axum 集成
+- `sa-token-web-axum` — axum 集成
   - SaTokenLayer 中间件
   - CurrentLoginId Extractor
   - OptionalLoginId Extractor

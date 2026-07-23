@@ -1,7 +1,15 @@
 //! Cookie 模型（对应 Java `cn.dev33.satoken.context.model.SaCookie`）。
 
+use std::collections::HashMap;
+
+use crate::error::SaErrorCode;
+use crate::exception::SaTokenException;
+
+/// 写入响应头时使用的 key（对应 Java `HEADER_NAME`）
+pub const HEADER_NAME: &str = "Set-Cookie";
+
 /// Cookie 模型
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct SaCookie {
     /// Cookie 名称
     pub name: String,
@@ -19,6 +27,8 @@ pub struct SaCookie {
     pub http_only: bool,
     /// SameSite 属性
     pub same_site: String,
+    /// 额外扩展属性
+    pub extra_attrs: HashMap<String, String>,
 }
 
 impl SaCookie {
@@ -29,11 +39,24 @@ impl SaCookie {
             value: value.into(),
             max_age: -1,
             domain: String::new(),
-            path: "/".to_string(),
+            path: String::new(),
             secure: false,
-            http_only: true,
-            same_site: "Lax".to_string(),
+            http_only: false,
+            same_site: String::new(),
+            extra_attrs: HashMap::new(),
         }
+    }
+
+    /// 设置名称
+    pub fn set_name(&mut self, name: impl Into<String>) -> &mut Self {
+        self.name = name.into();
+        self
+    }
+
+    /// 设置值
+    pub fn set_value(&mut self, value: impl Into<String>) -> &mut Self {
+        self.value = value.into();
+        self
     }
 
     /// 设置超时时间
@@ -66,25 +89,102 @@ impl SaCookie {
         self
     }
 
-    /// 转换为 HTTP 响应头格式
-    pub fn to_header_value(&self) -> String {
-        let mut parts = vec![format!("{}={}", self.name, self.value)];
-        if !self.domain.is_empty() {
-            parts.push(format!("Domain={}", self.domain));
+    /// 设置 SameSite
+    pub fn set_same_site(&mut self, same_site: impl Into<String>) -> &mut Self {
+        self.same_site = same_site.into();
+        self
+    }
+
+    /// 追加扩展属性
+    pub fn add_extra_attr(
+        &mut self,
+        name: impl Into<String>,
+        value: impl Into<String>,
+    ) -> &mut Self {
+        self.extra_attrs.insert(name.into(), value.into());
+        self
+    }
+
+    /// 填充默认值（对应 Java `builder()`）
+    pub fn builder(&mut self) {
+        if self.path.is_empty() {
+            self.path = "/".to_string();
         }
-        parts.push(format!("Path={}", self.path));
-        if self.max_age >= 0 {
-            parts.push(format!("Max-Age={}", self.max_age));
+    }
+
+    /// 转换为 HTTP 响应头格式（对应 Java `toHeaderValue()`）
+    ///
+    /// # Errors
+    /// name 为空或 value 含 `;` 时返回 [`SaTokenException`]
+    pub fn to_header_value(&self) -> Result<String, SaTokenException> {
+        let mut cookie = self.clone();
+        cookie.builder();
+
+        if cookie.name.is_empty() {
+            return Err(SaTokenException::with_code(
+                SaErrorCode::CODE_12002,
+                "name不能为空",
+            ));
         }
-        if self.secure {
+        if cookie.value.contains(';') {
+            return Err(SaTokenException::with_code(
+                SaErrorCode::CODE_12003,
+                format!("无效Value：{}", cookie.value),
+            ));
+        }
+
+        let mut parts = vec![format!("{}={}", cookie.name, cookie.value)];
+        if cookie.max_age >= 0 {
+            parts.push(format!("Max-Age={}", cookie.max_age));
+        }
+        if !cookie.domain.is_empty() {
+            parts.push(format!("Domain={}", cookie.domain));
+        }
+        if !cookie.path.is_empty() {
+            parts.push(format!("Path={}", cookie.path));
+        }
+        if cookie.secure {
             parts.push("Secure".to_string());
         }
-        if self.http_only {
+        if cookie.http_only {
             parts.push("HttpOnly".to_string());
         }
-        if !self.same_site.is_empty() {
-            parts.push(format!("SameSite={}", self.same_site));
+        if !cookie.same_site.is_empty() {
+            parts.push(format!("SameSite={}", cookie.same_site));
         }
-        parts.join("; ")
+        for (key, value) in &cookie.extra_attrs {
+            if value.is_empty() {
+                parts.push(key.clone());
+            } else {
+                parts.push(format!("{key}={value}"));
+            }
+        }
+        Ok(parts.join("; "))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn header_value_contains_core_fields() {
+        let mut cookie = SaCookie::new("satoken", "abc");
+        cookie
+            .set_path("/api")
+            .set_same_site("Lax")
+            .set_http_only(true);
+        let header = cookie.to_header_value().expect("valid cookie");
+        assert!(header.contains("satoken=abc"));
+        assert!(header.contains("Path=/api"));
+        assert!(header.contains("SameSite=Lax"));
+        assert!(header.contains("HttpOnly"));
+    }
+
+    #[test]
+    fn empty_name_is_rejected() {
+        let cookie = SaCookie::default();
+        let err = cookie.to_header_value().expect_err("must fail");
+        assert_eq!(err.code(), SaErrorCode::CODE_12002);
     }
 }

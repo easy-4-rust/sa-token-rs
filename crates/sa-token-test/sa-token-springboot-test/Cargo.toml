@@ -1,0 +1,22 @@
+[package]
+name = "sa-token-springboot-test"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "对应 Java sa-token-springboot-test（Spring Boot → axum）Web 集成测试"
+publish = false
+
+[dev-dependencies]
+sa-token.workspace = true
+sa-token-core.workspace = true
+sa-token-context-mock.workspace = true
+sa-token-dao-memory.workspace = true
+sa-token-web-axum.workspace = true
+axum = { workspace = true, features = ["macros"] }
+tokio.workspace = true
+tower.workspace = true
+http.workspace = true
+
+[lints]
+workspace = true

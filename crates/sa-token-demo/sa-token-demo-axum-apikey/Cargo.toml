@@ -1,0 +1,25 @@
+[package]
+name = "sa-token-demo-axum-apikey"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Axum ApiKey demo (maps Java sa-token-demo-apikey)"
+publish = false
+
+[[bin]]
+name = "sa-token-demo-axum-apikey"
+path = "src/main.rs"
+
+[dependencies]
+sa-token = { workspace = true, features = ["apikey"] }
+sa-token-web-axum.workspace = true
+sa-token-dao-memory.workspace = true
+sa-token-apikey.workspace = true
+axum = { workspace = true, features = ["macros"] }
+tokio.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+
+[lints]
+workspace = true

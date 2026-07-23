@@ -130,19 +130,24 @@ impl SaSession {
     }
 
     /// 添加终端
-    pub fn add_terminal(&mut self, terminal: SaTerminalInfo) {
+    pub fn add_terminal(&mut self, mut terminal: SaTerminalInfo) {
+        self.remove_terminal(terminal.token_value());
         self.history_terminal_count += 1;
+        terminal.index = self.history_terminal_count;
         self.terminal_list.push(terminal);
     }
 
     /// 移除终端
     pub fn remove_terminal(&mut self, token_value: &str) {
-        self.terminal_list.retain(|t| t.token_value() != token_value);
+        self.terminal_list
+            .retain(|t| t.token_value() != token_value);
     }
 
     /// 获取指定 Token 的终端
     pub fn get_terminal(&self, token_value: &str) -> Option<&SaTerminalInfo> {
-        self.terminal_list.iter().find(|t| t.token_value() == token_value)
+        self.terminal_list
+            .iter()
+            .find(|t| t.token_value() == token_value)
     }
 
     /// 获取指定设备类型的终端列表
@@ -198,5 +203,10 @@ impl SaSession {
     /// 清空数据
     pub fn clear(&mut self) {
         self.data_map.clear();
+    }
+
+    /// 拼接 session 持久化 key（对应 Java `SaSession.splicingKey`）
+    pub fn splicing_key(session_id: &str) -> String {
+        format!("satoken:session:{session_id}")
     }
 }

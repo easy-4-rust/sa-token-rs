@@ -1,0 +1,13 @@
+//! Concrete serializer adapters corresponding to Java `serializer.impl`.
+
+pub mod sa_serializer_template_for_jdk;
+pub mod sa_serializer_template_for_jdk_use_base64;
+pub mod sa_serializer_template_for_jdk_use_hex;
+pub mod sa_serializer_template_for_jdk_use_iso_8859_1;
+pub mod sa_serializer_template_for_json;
+
+pub use sa_serializer_template_for_jdk::SaSerializerTemplateForJdk;
+pub use sa_serializer_template_for_jdk_use_base64::SaSerializerTemplateForJdkUseBase64;
+pub use sa_serializer_template_for_jdk_use_hex::SaSerializerTemplateForJdkUseHex;
+pub use sa_serializer_template_for_jdk_use_iso_8859_1::SaSerializerTemplateForJdkUseIso88591;
+pub use sa_serializer_template_for_json::SaSerializerTemplateForJson;

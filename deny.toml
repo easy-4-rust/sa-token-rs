@@ -1,0 +1,51 @@
+[graph]
+all-features = true
+
+[advisories]
+unmaintained = "workspace"
+
+[licenses]
+confidence-threshold = 0.8
+allow = [
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "MIT",
+    "MIT-0",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+skip = [
+    # AES/CBC still use RustCrypto cipher 0.4 while bcrypt 0.19 uses 0.5.
+    { name = "cipher", version = "0.4.4" },
+    { name = "cpufeatures", version = "0.2.17" },
+    { name = "crypto-common", version = "0.1.7" },
+    { name = "inout", version = "0.1.4" },
+    # rsa/jsonwebtoken retain rand_core 0.6; project randomness uses rand 0.10.
+    { name = "getrandom", version = "0.2.17" },
+    { name = "rand", version = "0.8.7" },
+    { name = "rand_core", version = "0.6.4" },
+    # Salvo 0.85 is the newest release compatible with MSRV 1.88 and still uses rand 0.9.
+    { name = "getrandom", version = "0.3.4" },
+    { name = "rand", version = "0.9.5" },
+    { name = "rand_chacha", version = "0.9.0" },
+    { name = "rand_core", version = "0.9.5" },
+    { name = "r-efi", version = "5.3.0" },
+    # Actix Web 4.14 retains the http 0.2/cookie 0.16/socket2 0.5 compatibility line.
+    { name = "cookie", version = "0.16.2" },
+    { name = "http", version = "0.2.12" },
+    { name = "socket2", version = "0.5.10" },
+    { name = "windows-sys", version = "0.52.0" },
+    # Current serde/thiserror proc macros have moved to syn 3 ahead of the ecosystem.
+    { name = "syn", version = "2.0.119" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

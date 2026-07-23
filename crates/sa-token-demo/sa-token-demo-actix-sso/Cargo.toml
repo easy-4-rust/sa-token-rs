@@ -1,0 +1,27 @@
+[package]
+name = "sa-token-demo-actix-sso"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Actix SSO server mini demo (maps Java sa-token-demo-sso-server)"
+publish = false
+
+[[bin]]
+name = "sa-token-demo-actix-sso"
+path = "src/main.rs"
+
+[dependencies]
+sa-token = { workspace = true, features = ["actix-web"] }
+sa-token-web-actix.workspace = true
+sa-token-dao-memory.workspace = true
+sa-token-core.workspace = true
+sa-token-sso.workspace = true
+sa-token-sign.workspace = true
+actix-web = { workspace = true, features = ["macros"] }
+tokio.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+
+[lints]
+workspace = true

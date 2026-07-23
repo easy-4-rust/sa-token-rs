@@ -1,0 +1,19 @@
+[package]
+name = "sa-token-temp-jwt-test"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "对应 Java sa-token-temp-jwt-test：临时 Token + JWT（插件待迁时先测 core SaTemp）"
+publish = false
+
+[dev-dependencies]
+sa-token.workspace = true
+sa-token-core.workspace = true
+sa-token-context-mock.workspace = true
+sa-token-dao-memory.workspace = true
+sa-token-temp-jwt.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

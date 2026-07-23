@@ -58,7 +58,7 @@ fn main() {
 ```rust
 use axum::{routing::get, Router, Json};
 use sa_token::prelude::*;
-use sa_token_axum::{SaTokenLayer, CurrentLoginId};
+use sa_token_web_axum::{SaTokenLayer, CurrentLoginId};
 
 async fn user_info(login_id: CurrentLoginId) -> Json<String> {
     Json(format!("Hello, {}!", login_id.0))
@@ -145,17 +145,31 @@ assert_eq!(claims.sub, "10001");
 ```text
 sa-token-rs/
 ├── crates/
-│   ├── sa-token/                 # 用户入口
+│   ├── sa-token/                 # 用户入口（门面）
 │   ├── sa-token-core/            # 核心库
-│   ├── sa-token-derive/          # proc-macro 注解
-│   ├── sa-token-axum/            # axum 适配
-│   ├── sa-token-context-mock/    # Mock 上下文
-│   ├── sa-token-dao-memory/      # Memory DAO
-│   ├── sa-token-dao-redis/       # Redis DAO
-│   └── sa-token-plugin/
-│       ├── sa-token-jwt/         # JWT 插件
-│       └── sa-token-sign/        # API 签名插件
-└── docs/                         # 文档
+│   ├── sa-token-web/             # Web 框架适配
+│   │   ├── sa-token-web-axum/
+│   │   ├── sa-token-web-actix/
+│   │   └── sa-token-web-salvo/
+│   ├── sa-token-dao/             # 存储适配
+│   │   ├── sa-token-dao-memory/
+│   │   └── sa-token-dao-redis/
+│   ├── sa-token-support/         # core 附属
+│   │   ├── sa-token-derive/
+│   │   └── sa-token-context-mock/
+│   ├── sa-token-plugin/          # 能力插件
+│   │   ├── sa-token-jwt/
+│   │   └── sa-token-sign/
+│   ├── sa-token-test/            # 对齐 Java 测试合集
+│   │   ├── sa-token-easy-test/
+│   │   ├── sa-token-springboot-test/  # Spring Boot→axum
+│   │   ├── sa-token-jwt-test/
+│   │   ├── sa-token-temp-jwt-test/
+│   │   ├── sa-token-json-test/
+│   │   ├── sa-token-jackson3-test/
+│   │   └── sa-token-serializer-test/
+│   └── sa-token-demo/
+└── docs/
 ```
 
 ## 与 Java Sa-Token 的对应关系
@@ -179,7 +193,7 @@ cargo test -- --test-threads=1
 # 运行特定测试
 cargo test -p sa-token-test --test login_test
 cargo test -p sa-token-test --test phase2_test
-cargo test -p sa-token-axum --test axum_test
+cargo test -p sa-token-web-axum --test axum_test
 cargo test -p sa-token-jwt
 ```
 

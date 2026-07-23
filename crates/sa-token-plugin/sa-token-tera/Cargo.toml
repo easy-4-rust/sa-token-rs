@@ -1,0 +1,21 @@
+[package]
+name = "sa-token-tera"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository = "https://github.com/dromara/sa-token-rs"
+description = "Tera template dialect plugin for sa-token-rs (maps Java sa-token-freemarker)"
+
+[dependencies]
+sa-token-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tera.workspace = true
+
+[dev-dependencies]
+sa-token-dao-memory.workspace = true
+sa-token-context-mock.workspace = true
+
+[lints]
+workspace = true

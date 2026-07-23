@@ -1,0 +1,21 @@
+[package]
+name = "sa-token-sso"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Sa-Token SSO 单点登录模块（对应 Java sa-token-sso）"
+
+[dependencies]
+sa-token-core = { workspace = true }
+sa-token-sign = { workspace = true }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+url.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true

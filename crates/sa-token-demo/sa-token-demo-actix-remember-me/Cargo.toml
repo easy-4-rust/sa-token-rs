@@ -1,0 +1,24 @@
+[package]
+name = "sa-token-demo-actix-remember-me"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Actix remember-me demo (maps Java sa-token-demo-remember-me)"
+publish = false
+
+[[bin]]
+name = "sa-token-demo-actix-remember-me"
+path = "src/main.rs"
+
+[dependencies]
+sa-token.workspace = true
+sa-token-dao-memory.workspace = true
+sa-token-core.workspace = true
+actix-web = { workspace = true, features = ["macros"] }
+tokio.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,15 @@
+[package]
+name = "sa-token-jwt-test"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "对应 Java sa-token-jwt-test：JWT 三种模式契约测试"
+publish = false
+
+[dev-dependencies]
+sa-token-jwt.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

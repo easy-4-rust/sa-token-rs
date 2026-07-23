@@ -1,0 +1,24 @@
+[package]
+name = "sa-token-demo-actix-sign"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Actix sign demo (sa-token-sign)"
+publish = false
+
+[[bin]]
+name = "sa-token-demo-actix-sign"
+path = "src/main.rs"
+
+[dependencies]
+sa-token-sign.workspace = true
+sa-token-dao-memory.workspace = true
+sa-token-core.workspace = true
+actix-web = { workspace = true, features = ["macros"] }
+tokio.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+
+[lints]
+workspace = true

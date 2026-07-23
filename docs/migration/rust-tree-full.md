@@ -36,22 +36,31 @@ sa-token-rs/
 └── crates/
     ├── sa-token/                      ⬜ facade
     ├── sa-token-core/                 ⬜ 核心库
-    ├── sa-token-derive/               ⬜ proc-macro
-    ├── sa-token-context-mock/         ⬜ Mock 上下文
-    ├── sa-token-dao-memory/           ⬜ Memory DAO
-    ├── sa-token-dao-redis/            ⬜ Redis DAO
-    ├── sa-token-dao-moka/             ⬜ moka DAO
-    ├── sa-token-starter/
-    │   ├── sa-token-axum/             ⬜ axum 适配
-    │   ├── sa-token-actix-web/        ⬜ actix 适配
-    │   └── sa-token-salvo/            ⬜ salvo 适配
+    ├── sa-token-web/
+    │   ├── sa-token-web-axum/         ⬜ axum 适配
+    │   ├── sa-token-web-actix/        ⬜ actix 适配
+    │   └── sa-token-web-salvo/        ⬜ salvo 适配
+    ├── sa-token-dao/
+    │   ├── sa-token-dao-memory/       ⬜ Memory DAO
+    │   ├── sa-token-dao-redis/        ⬜ Redis DAO
+    │   └── sa-token-dao-moka/         ⬜ moka DAO（待）
+    ├── sa-token-support/
+    │   ├── sa-token-derive/           ⬜ proc-macro
+    │   └── sa-token-context-mock/     ⬜ Mock 上下文
     ├── sa-token-plugin/
     │   ├── sa-token-jwt/              ⬜ JWT 插件
     │   ├── sa-token-sign/             ⬜ Sign 插件
     │   ├── sa-token-oauth2/           ⬜ OAuth2 插件
     │   ├── sa-token-sso/              ⬜ SSO 插件
     │   └── sa-token-apikey/           ⬜ ApiKey 插件
-    ├── sa-token-test/                 ⬜ 集成测试
+    ├── sa-token-test/                 # 对齐 Java sa-token-test（pom 合集）
+    │   ├── sa-token-easy-test/
+    │   ├── sa-token-springboot-test/  # Spring Boot → axum
+    │   ├── sa-token-jwt-test/
+    │   ├── sa-token-temp-jwt-test/
+    │   ├── sa-token-json-test/
+    │   ├── sa-token-jackson3-test/    # Jackson3 → serde
+    │   └── sa-token-serializer-test/
     └── sa-token-demo/
         ├── sa-token-demo-axum/        ⬜ axum 示例
         ├── sa-token-demo-actix-web/   ⬜ actix 示例

@@ -1,0 +1,19 @@
+[package]
+name = "sa-token-askama"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository = "https://github.com/dromara/sa-token-rs"
+description = "Askama template dialect plugin for sa-token-rs (maps Java sa-token-thymeleaf)"
+
+[dependencies]
+sa-token-core.workspace = true
+
+[dev-dependencies]
+askama.workspace = true
+sa-token-dao-memory.workspace = true
+sa-token-context-mock.workspace = true
+
+[lints]
+workspace = true

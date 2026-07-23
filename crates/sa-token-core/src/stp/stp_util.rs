@@ -1,7 +1,7 @@
 //! 静态门面（对应 Java `cn.dev33.satoken.stp.StpUtil`）。
 
 use crate::exception::SaResult;
-use crate::manager::SaManager;
+use crate::sa_manager::SaManager;
 use crate::session::sa_session::SaSession;
 use crate::session::sa_terminal_info::SaTerminalInfo;
 use crate::stp::parameter::sa_login_parameter::SaLoginParameter;
@@ -84,7 +84,7 @@ impl StpUtil {
     // ==================== 登录状态 ====================
 
     /// 是否已登录
-    pub fn is_login() -> bool {
+    pub fn is_login() -> SaResult<bool> {
         Self::stp_logic().is_login()
     }
 
@@ -99,7 +99,7 @@ impl StpUtil {
     }
 
     /// 获取当前登录 ID（未登录返回 None）
-    pub fn get_login_id_default_null() -> Option<String> {
+    pub fn get_login_id_default_null() -> SaResult<Option<String>> {
         Self::stp_logic().get_login_id_default_null()
     }
 
@@ -119,7 +119,7 @@ impl StpUtil {
     }
 
     /// 根据 Token 获取 loginId
-    pub fn get_login_id_by_token(token_value: &str) -> Option<String> {
+    pub fn get_login_id_by_token(token_value: &str) -> SaResult<Option<String>> {
         Self::stp_logic().get_login_id_by_token(token_value)
     }
 
@@ -167,10 +167,15 @@ impl StpUtil {
         Self::stp_logic().get_token_session_by_token(token_value)
     }
 
+    /// 获取匿名 Token-Session
+    pub fn get_anon_token_session() -> SaResult<SaSession> {
+        Self::stp_logic().get_anon_token_session()
+    }
+
     // ==================== Token 超时 ====================
 
     /// 获取当前 Token 超时时间
-    pub fn get_token_timeout() -> i64 {
+    pub fn get_token_timeout() -> SaResult<i64> {
         Self::stp_logic().get_token_timeout()
     }
 
@@ -218,12 +223,12 @@ impl StpUtil {
     }
 
     /// 获取指定账号的 Token 列表
-    pub fn get_token_value_list_by_login_id(login_id: &str) -> Vec<String> {
+    pub fn get_token_value_list_by_login_id(login_id: &str) -> SaResult<Vec<String>> {
         Self::stp_logic().get_token_value_list_by_login_id(login_id)
     }
 
     /// 获取指定账号的 Token 值
-    pub fn get_token_value_by_login_id(login_id: &str) -> Option<String> {
+    pub fn get_token_value_by_login_id(login_id: &str) -> SaResult<Option<String>> {
         Self::stp_logic().get_token_value_by_login_id(login_id)
     }
 
@@ -322,18 +327,38 @@ impl StpUtil {
     }
 
     /// 获取封禁剩余时间
-    pub fn get_disable_time(login_id: &str) -> i64 {
+    pub fn get_disable_time(login_id: &str) -> SaResult<i64> {
         Self::stp_logic().get_disable_time(login_id)
     }
 
     /// 指定账号是否被封禁
-    pub fn is_disable(login_id: &str) -> bool {
+    pub fn is_disable(login_id: &str) -> SaResult<bool> {
         Self::stp_logic().is_disable(login_id)
     }
 
     /// 检查账号是否被封禁（被封禁则抛异常）
     pub fn check_disable(login_id: &str) -> SaResult<()> {
         Self::stp_logic().check_disable(login_id)
+    }
+
+    /// 阶梯封禁：指定账号与等级
+    pub fn disable_level(login_id: &str, level: i32, time: i64) -> SaResult<()> {
+        Self::stp_logic().disable_level(login_id, level, time)
+    }
+
+    /// 获取封禁等级
+    pub fn get_disable_level(login_id: &str) -> SaResult<i32> {
+        Self::stp_logic().get_disable_level(login_id)
+    }
+
+    /// 是否被封禁到指定等级
+    pub fn is_disable_level(login_id: &str, level: i32) -> SaResult<bool> {
+        Self::stp_logic().is_disable_level(login_id, level)
+    }
+
+    /// 检查是否被封禁到指定等级
+    pub fn check_disable_level(login_id: &str, level: i32) -> SaResult<()> {
+        Self::stp_logic().check_disable_level(login_id, level)
     }
 
     // ==================== 安全认证 ====================
@@ -349,7 +374,7 @@ impl StpUtil {
     }
 
     /// 当前是否处于二级认证
-    pub fn is_safe() -> bool {
+    pub fn is_safe() -> SaResult<bool> {
         Self::stp_logic().is_safe()
     }
 
@@ -376,12 +401,18 @@ impl StpUtil {
     }
 
     /// 当前是否处于切换状态
-    pub fn is_switch() -> bool {
+    pub fn is_switch() -> SaResult<bool> {
         Self::stp_logic().is_switch()
     }
 
     /// 获取临时切换的 loginId
-    pub fn get_switch_login_id() -> Option<String> {
+    pub fn get_switch_login_id() -> SaResult<Option<String>> {
         Self::stp_logic().get_switch_login_id()
     }
 }
+
+// 同名模块/类型问题：导出为 `StpUtilType` 以便 `Stp/mod.rs` 通过 `StpUtilType::TYPE` 访问。
+pub use StpUtil as StpUtilType;
+
+// 同名模块/类型问题：导出模块级常量别名以避免路径冲突。
+pub const STYPE: &str = "login";

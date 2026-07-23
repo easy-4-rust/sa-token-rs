@@ -1,123 +1,135 @@
-//! JWT 插件测试
+//! JWT mode, claim, expiry, and error-code contracts.
 
-use sa_token_jwt::{JwtConfig, SaJwtTemplate};
+use std::collections::HashMap;
 
-/// 测试 JWT Token 生成与解析
+use sa_token_jwt::{
+    SaJwtErrorCode, SaJwtTemplate, StpLogicJwtForMixin, StpLogicJwtForSimple,
+    StpLogicJwtForStateless,
+};
+use serde_json::{Value, json};
+
+const SECRET: &str = "test-secret-key-with-enough-entropy";
+
 #[test]
-fn test_jwt_create_and_parse() {
-    let config = JwtConfig::new("test-secret-key");
-    let jwt = SaJwtTemplate::new(config);
-
-    // 生成 Token
-    let token = jwt.create_token("10001", "login", 3600).unwrap();
-    assert!(!token.is_empty());
-
-    // 解析 Token
-    let claims = jwt.parse_token(&token).unwrap();
-    assert_eq!(claims.sub, "10001");
-    assert_eq!(claims.login_type, "login");
+fn template_uses_java_claims_and_millisecond_expiry() {
+    let token = SaJwtTemplate
+        .create_token_full(
+            "login",
+            json!(10001),
+            "web",
+            60,
+            HashMap::from([("role".into(), json!("admin"))]),
+            SECRET,
+        )
+        .expect("full JWT creation");
+    let payload = SaJwtTemplate
+        .get_payloads(&token, "login", SECRET)
+        .expect("full JWT parsing");
+    assert_eq!(payload[SaJwtTemplate::LOGIN_ID], json!(10001));
+    assert_eq!(payload[SaJwtTemplate::DEVICE_TYPE], json!("web"));
+    assert_eq!(payload["role"], json!("admin"));
+    assert_eq!(
+        payload[SaJwtTemplate::RN_STR].as_str().map(str::len),
+        Some(32)
+    );
+    assert!((59..=60).contains(&SaJwtTemplate.get_timeout(&token, "login", SECRET)));
 }
 
-/// 测试 JWT Token 验证
 #[test]
-fn test_jwt_verify() {
-    let config = JwtConfig::new("test-secret-key");
-    let jwt = SaJwtTemplate::new(config);
-
-    // 生成 Token
-    let token = jwt.create_token("10001", "login", 3600).unwrap();
-
-    // 验证 Token
-    assert!(jwt.verify_token(&token));
-
-    // 获取 login_id
-    assert_eq!(jwt.get_login_id(&token).unwrap(), "10001");
+fn validation_errors_preserve_java_codes() {
+    let token = SaJwtTemplate
+        .create_token_full("login", json!(1), "web", 60, HashMap::new(), SECRET)
+        .expect("JWT creation");
+    assert_eq!(
+        SaJwtTemplate
+            .parse_token("not-a-jwt", "login", SECRET, true)
+            .expect_err("malformed JWT")
+            .code(),
+        SaJwtErrorCode::CODE_30201
+    );
+    assert_eq!(
+        SaJwtTemplate
+            .parse_token(&token, "login", "wrong-secret", true)
+            .expect_err("invalid signature")
+            .code(),
+        SaJwtErrorCode::CODE_30202
+    );
+    assert_eq!(
+        SaJwtTemplate
+            .parse_token(&token, "admin", SECRET, true)
+            .expect_err("invalid login type")
+            .code(),
+        SaJwtErrorCode::CODE_30203
+    );
+    assert_eq!(
+        SaJwtTemplate
+            .create_token_full("login", json!(1), "web", -2, HashMap::new(), SECRET)
+            .and_then(|token| SaJwtTemplate.parse_token(&token, "login", SECRET, true))
+            .expect_err("expired JWT")
+            .code(),
+        SaJwtErrorCode::CODE_30204
+    );
+    assert_eq!(
+        SaJwtTemplate
+            .create_token("login", json!(1), HashMap::new(), "")
+            .expect_err("missing secret")
+            .code(),
+        SaJwtErrorCode::CODE_30205
+    );
+    assert_eq!(
+        SaJwtTemplate
+            .create_token("login", Value::Null, HashMap::new(), SECRET)
+            .expect_err("missing login id")
+            .code(),
+        SaJwtErrorCode::CODE_30206
+    );
 }
 
-/// 测试 JWT Token 过期
 #[test]
-fn test_jwt_expired() {
-    let config = JwtConfig::new("test-secret-key");
-    let jwt = SaJwtTemplate::new(config);
-
-    // 生成已过期的 Token（timeout = 1，1秒后过期）
-    let token = jwt.create_token("10001", "login", 1).unwrap();
-
-    // 等待 Token 过期
-    std::thread::sleep(std::time::Duration::from_secs(2));
-
-    // 检查是否过期
-    assert!(jwt.is_expired(&token));
+fn simple_mode_has_no_expiry_and_never_reuses_tokens() {
+    let logic = StpLogicJwtForSimple::new("login", SECRET);
+    let first = logic
+        .create_token_value(
+            json!(10001),
+            HashMap::from([("tenant".into(), json!("t1"))]),
+        )
+        .expect("simple JWT");
+    let second = logic
+        .create_token_value(json!(10001), HashMap::new())
+        .expect("second simple JWT");
+    assert_ne!(first, second);
+    assert_eq!(
+        logic.get_extra(&first, "tenant").expect("extra"),
+        Some(json!("t1"))
+    );
+    assert!(!logic.is_support_share_token());
+    assert!(logic.is_support_extra());
 }
 
-/// 测试 JWT Token 永不过期
 #[test]
-fn test_jwt_never_expire() {
-    let config = JwtConfig::new("test-secret-key");
-    let jwt = SaJwtTemplate::new(config);
+fn mixin_and_stateless_modes_keep_distinct_storage_boundaries() {
+    let mixin = StpLogicJwtForMixin::new("login", SECRET);
+    let mixin_token = mixin
+        .create_token_value(json!(10001), "app", -1, HashMap::new())
+        .expect("mixin JWT");
+    assert_eq!(
+        mixin.get_login_id(&mixin_token).expect("mixin identity"),
+        json!(10001)
+    );
+    assert_eq!(mixin.get_token_timeout(&mixin_token), -1);
+    assert!(mixin.supports_token_session());
 
-    // 生成永不过期的 Token（timeout = 0）
-    let token = jwt.create_token("10001", "login", 0).unwrap();
-
-    // 检查是否过期（应该不过期）
-    assert!(!jwt.is_expired(&token));
-}
-
-/// 测试 JWT Token 带扩展数据
-#[test]
-fn test_jwt_with_extra() {
-    let config = JwtConfig::new("test-secret-key");
-    let jwt = SaJwtTemplate::new(config);
-
-    // 生成带扩展数据的 Token
-    let mut extra = std::collections::HashMap::new();
-    extra.insert("role".to_string(), serde_json::json!("admin"));
-    extra.insert("tenant_id".to_string(), serde_json::json!("t001"));
-
-    let token = jwt
-        .create_token_with_extra("10001", "login", 3600, Some(extra))
-        .unwrap();
-
-    // 解析 Token
-    let claims = jwt.parse_token(&token).unwrap();
-    assert_eq!(claims.sub, "10001");
-
-    // 检查扩展数据
-    let extra = claims.extra.unwrap();
-    assert_eq!(extra.get("role").unwrap(), &serde_json::json!("admin"));
-    assert_eq!(extra.get("tenant_id").unwrap(), &serde_json::json!("t001"));
-}
-
-/// 测试 JWT Token 签发者和受众
-#[test]
-fn test_jwt_issuer_audience() {
-    let config = JwtConfig::new("test-secret-key")
-        .with_issuer("sa-token")
-        .with_audience("my-app");
-    let jwt = SaJwtTemplate::new(config);
-
-    // 生成 Token
-    let token = jwt.create_token("10001", "login", 3600).unwrap();
-
-    // 解析 Token
-    let claims = jwt.parse_token(&token).unwrap();
-    assert_eq!(claims.iss.unwrap(), "sa-token");
-    assert_eq!(claims.aud.unwrap(), "my-app");
-}
-
-/// 测试 JWT Token 无效签名
-#[test]
-fn test_jwt_invalid_signature() {
-    let config = JwtConfig::new("test-secret-key");
-    let jwt = SaJwtTemplate::new(config);
-
-    // 生成 Token
-    let token = jwt.create_token("10001", "login", 3600).unwrap();
-
-    // 用不同的密钥解析
-    let config2 = JwtConfig::new("wrong-secret-key");
-    let jwt2 = SaJwtTemplate::new(config2);
-
-    // 应该失败
-    assert!(jwt2.parse_token(&token).is_err());
+    let stateless = StpLogicJwtForStateless::new("login", SECRET);
+    let token = stateless
+        .create_login_session(json!(10002), "web", 60, HashMap::new())
+        .expect("stateless JWT");
+    assert_eq!(
+        stateless.get_login_id(&token).expect("identity"),
+        json!(10002)
+    );
+    assert_eq!(
+        stateless.get_login_device_type(&token).expect("device"),
+        Some("web".into())
+    );
+    assert!(!stateless.supports_persistent_dao());
 }

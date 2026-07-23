@@ -1,50 +1,112 @@
 [workspace]
 members = [
+    "xtask",
+    "crates/sa-token-doc",
     "crates/sa-token",
-    "crates/sa-token-axum",
+    "crates/sa-token-web/sa-token-web-axum",
+    "crates/sa-token-web/sa-token-web-actix",
+    "crates/sa-token-web/sa-token-web-salvo",
     "crates/sa-token-core",
-    "crates/sa-token-derive",
-    "crates/sa-token-context-mock",
-    "crates/sa-token-dao-memory",
-    "crates/sa-token-dao-redis",
+    "crates/sa-token-support/sa-token-derive",
+    "crates/sa-token-support/sa-token-context-mock",
+    "crates/sa-token-dao/sa-token-dao-memory",
+    "crates/sa-token-dao/sa-token-dao-redis",
     "crates/sa-token-plugin/sa-token-jwt",
+    "crates/sa-token-plugin/sa-token-temp-jwt",
+    "crates/sa-token-plugin/sa-token-quick-login",
     "crates/sa-token-plugin/sa-token-sign",
+    "crates/sa-token-plugin/sa-token-sso",
+    "crates/sa-token-plugin/sa-token-oauth2",
+    "crates/sa-token-plugin/sa-token-apikey",
+    "crates/sa-token-plugin/sa-token-serializer-features",
+    "crates/sa-token-plugin/sa-token-tera",
+    "crates/sa-token-plugin/sa-token-askama",
     "crates/sa-token-demo/sa-token-demo-axum",
-    "crates/sa-token-test",
+    "crates/sa-token-demo/sa-token-demo-actix-web",
+    "crates/sa-token-demo/sa-token-demo-axum-jwt",
+    "crates/sa-token-demo/sa-token-demo-actix-jwt",
+    "crates/sa-token-demo/sa-token-demo-axum-redis",
+    "crates/sa-token-demo/sa-token-demo-actix-redis",
+    "crates/sa-token-demo/sa-token-demo-axum-apikey",
+    "crates/sa-token-demo/sa-token-demo-actix-apikey",
+    "crates/sa-token-demo/sa-token-demo-axum-oauth2",
+    "crates/sa-token-demo/sa-token-demo-actix-oauth2",
+    "crates/sa-token-demo/sa-token-demo-axum-sso",
+    "crates/sa-token-demo/sa-token-demo-actix-sso",
+    "crates/sa-token-demo/sa-token-demo-axum-websocket",
+    "crates/sa-token-demo/sa-token-demo-actix-websocket",
+    "crates/sa-token-demo/sa-token-demo-tera",
+    "crates/sa-token-demo/sa-token-demo-askama",
+    "crates/sa-token-demo/sa-token-demo-axum-case",
+    "crates/sa-token-demo/sa-token-demo-actix-case",
+    "crates/sa-token-demo/sa-token-demo-axum-async",
+    "crates/sa-token-demo/sa-token-demo-actix-async",
+    "crates/sa-token-demo/sa-token-demo-axum-remember-me",
+    "crates/sa-token-demo/sa-token-demo-actix-remember-me",
+    "crates/sa-token-demo/sa-token-demo-axum-device-lock",
+    "crates/sa-token-demo/sa-token-demo-actix-device-lock",
+    "crates/sa-token-demo/sa-token-demo-axum-quick-login",
+    "crates/sa-token-demo/sa-token-demo-actix-quick-login",
+    "crates/sa-token-demo/sa-token-demo-axum-sign",
+    "crates/sa-token-demo/sa-token-demo-actix-sign",
+    "crates/sa-token-demo/sa-token-demo-axum-sse",
+    "crates/sa-token-demo/sa-token-demo-actix-sse",
+    "crates/sa-token-demo/sa-token-demo-axum-alone-redis",
+    "crates/sa-token-demo/sa-token-demo-actix-alone-redis",
+    "crates/sa-token-demo/sa-token-demo-axum-oauth2-client",
+    "crates/sa-token-demo/sa-token-demo-actix-oauth2-client",
+    "crates/sa-token-demo/sa-token-demo-axum-sso-client",
+    "crates/sa-token-demo/sa-token-demo-actix-sso-client",
+    "crates/sa-token-test/sa-token-easy-test",
+    "crates/sa-token-test/sa-token-springboot-test",
+    "crates/sa-token-test/sa-token-jwt-test",
+    "crates/sa-token-test/sa-token-temp-jwt-test",
+    "crates/sa-token-test/sa-token-json-test",
+    "crates/sa-token-test/sa-token-jackson3-test",
+    "crates/sa-token-test/sa-token-serializer-test",
 ]
 resolver = "3"
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.88"
 license = "Apache-2.0"
 repository = "https://github.com/dromara/sa-token-rs"
 
 [workspace.dependencies]
-sa-token = { path = "crates/sa-token" }
-sa-token-axum = { path = "crates/sa-token-axum" }
-sa-token-core = { path = "crates/sa-token-core" }
-sa-token-derive = { path = "crates/sa-token-derive" }
-sa-token-context-mock = { path = "crates/sa-token-context-mock" }
-sa-token-dao-memory = { path = "crates/sa-token-dao-memory" }
-sa-token-dao-redis = { path = "crates/sa-token-dao-redis" }
-sa-token-jwt = { path = "crates/sa-token-plugin/sa-token-jwt" }
-sa-token-sign = { path = "crates/sa-token-plugin/sa-token-sign" }
+sa-token = { version = "=0.1.0", path = "crates/sa-token" }
+sa-token-web-axum = { version = "=0.1.0", path = "crates/sa-token-web/sa-token-web-axum" }
+sa-token-web-actix = { version = "=0.1.0", path = "crates/sa-token-web/sa-token-web-actix" }
+sa-token-web-salvo = { version = "=0.1.0", path = "crates/sa-token-web/sa-token-web-salvo" }
+sa-token-core = { version = "=0.1.0", path = "crates/sa-token-core" }
+sa-token-derive = { version = "=0.1.0", path = "crates/sa-token-support/sa-token-derive" }
+sa-token-context-mock = { version = "=0.1.0", path = "crates/sa-token-support/sa-token-context-mock" }
+sa-token-dao-memory = { version = "=0.1.0", path = "crates/sa-token-dao/sa-token-dao-memory" }
+sa-token-dao-redis = { version = "=0.1.0", path = "crates/sa-token-dao/sa-token-dao-redis" }
+sa-token-jwt = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-jwt" }
+sa-token-temp-jwt = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-temp-jwt" }
+sa-token-quick-login = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-quick-login" }
+sa-token-sign = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-sign" }
+sa-token-sso = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-sso" }
+sa-token-oauth2 = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-oauth2" }
+sa-token-apikey = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-apikey" }
+sa-token-serializer-features = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-serializer-features" }
 
 # 外部依赖
-axum = { version = "0.7" }
-axum-extra = { version = "0.9" }
+axum = { version = "0.8" }
+actix-web = { version = "4.14", default-features = false, features = ["cookies", "macros"] }
+salvo = { version = "0.85", default-features = false, features = ["cookie"] }
+axum-extra = { version = "0.12" }
 tower = "0.5"
-tower-http = { version = "0.6" }
+tower-http = { version = "0.7" }
 http = "1"
 async-trait = "0.1"
 futures-util = "0.3"
 urlencoding = "2"
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["macros", "net", "rt-multi-thread", "sync", "time"] }
 hyper = { version = "1" }
-tower-util = "0.3"
-redis = { version = "0.27", features = ["tokio-comp"] }
+redis = { version = "1.4", default-features = false, features = ["connection-manager", "script", "tokio-comp"] }
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -55,19 +117,29 @@ uuid = { version = "1", features = ["v4"] }
 base64 = "0.22"
 hex = "0.4"
 sha2 = "0.10"
+sha1 = "0.10"
 hmac = "0.12"
 md-5 = "0.10"
-rand = "0.8"
+rand = "0.10"
 regex = "1"
 url = "2"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 proc-macro2 = "1"
 quote = "1"
 syn = { version = "2", features = ["full"] }
+jsonwebtoken = { version = "10.4", default-features = false, features = ["aws_lc_rs"] }
+bcrypt = "0.19"
+openssl = "0.10.81"
+tera = "1.20"
+askama = "0.14"
+sa-token-tera = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-tera" }
+sa-token-askama = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-askama" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
-missing_docs = "warn"
+non_snake_case = "deny"
+non_camel_case_types = "deny"
+non_upper_case_globals = "deny"
 
 [workspace.lints.clippy]
 all = "warn"
-pedantic = "warn"

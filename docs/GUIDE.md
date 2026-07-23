@@ -13,7 +13,7 @@
 # Cargo.toml
 [dependencies]
 sa-token = "0.1"              # 核心门面（必选）
-sa-token-axum = "0.1"         # Web 框架适配（任选其一）
+sa-token-web-axum = "0.1"         # Web 框架适配（任选其一）
 tokio = { version = "1", features = ["full"] }
 ```
 
@@ -53,7 +53,7 @@ fn main() -> SaResult<()> {
 ```rust
 use axum::{routing::get, Router, Json};
 use sa_token::prelude::*;
-use sa_token_axum::SaTokenLayer;
+use sa_token_web_axum::SaTokenLayer;
 
 #[tokio::main]
 async fn main() {

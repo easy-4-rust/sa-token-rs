@@ -8,6 +8,27 @@ pub trait SaRequest: Send + Sync {
     /// 获取请求参数
     fn get_param(&self, name: &str) -> Option<String>;
 
+    /// 获取请求参数，空值时返回默认值（对应 Java 默认方法）
+    fn get_param_or_default(&self, name: &str, default_value: &str) -> String {
+        self.get_param(name)
+            .filter(|value| !value.is_empty())
+            .unwrap_or_else(|| default_value.to_string())
+    }
+
+    /// 检测参数是否等于指定值（对应 Java `isParam`）
+    fn is_param(&self, name: &str, value: &str) -> bool {
+        self.get_param(name)
+            .map(|param| !param.is_empty() && param == value)
+            .unwrap_or(false)
+    }
+
+    /// 检测是否提供了指定参数（对应 Java `hasParam`）
+    fn has_param(&self, name: &str) -> bool {
+        self.get_param(name)
+            .map(|value| !value.is_empty())
+            .unwrap_or(false)
+    }
+
     /// 获取请求头
     fn get_header(&self, name: &str) -> Option<String>;
 

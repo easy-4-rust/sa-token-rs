@@ -1,81 +1,82 @@
-//! Cookie 配置（对应 Java `cn.dev33.satoken.config.SaCookieConfig`）。
+//! Cookie write configuration.
+
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 
-/// Cookie 配置
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Cookie attributes matching Java's nullable configuration model.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SaCookieConfig {
-    /// Cookie 域名
-    pub domain: String,
-    /// Cookie 路径
-    pub path: String,
-    /// 是否仅 HTTPS
+    /// Explicit cookie domain.
+    pub domain: Option<String>,
+    /// Explicit cookie path.
+    pub path: Option<String>,
+    /// Whether the cookie is HTTPS-only.
     pub secure: bool,
-    /// 是否仅 HTTP 访问
+    /// Whether JavaScript access is disabled.
     pub http_only: bool,
-    /// SameSite 属性
-    pub same_site: String,
-}
-
-impl Default for SaCookieConfig {
-    fn default() -> Self {
-        Self {
-            domain: String::new(),
-            path: "/".to_string(),
-            secure: false,
-            http_only: true,
-            same_site: "Lax".to_string(),
-        }
-    }
+    /// SameSite policy.
+    pub same_site: Option<String>,
+    /// Extension attributes; `None` represents a flag-only attribute.
+    pub extra_attrs: BTreeMap<String, Option<String>>,
 }
 
 impl SaCookieConfig {
-    /// 获取域名
-    pub fn domain(&self) -> &str {
-        &self.domain
+    /// Sets the cookie domain.
+    pub fn set_domain(&mut self, domain: impl Into<String>) -> &mut Self {
+        self.domain = Some(domain.into());
+        self
     }
 
-    /// 设置域名
-    pub fn set_domain(&mut self, domain: impl Into<String>) {
-        self.domain = domain.into();
+    /// Sets the cookie path.
+    pub fn set_path(&mut self, path: impl Into<String>) -> &mut Self {
+        self.path = Some(path.into());
+        self
     }
 
-    /// 获取路径
-    pub fn path(&self) -> &str {
-        &self.path
-    }
-
-    /// 设置路径
-    pub fn set_path(&mut self, path: impl Into<String>) {
-        self.path = path.into();
-    }
-
-    /// 是否仅 HTTPS
-    pub fn is_secure(&self) -> bool {
-        self.secure
-    }
-
-    /// 设置是否仅 HTTPS
-    pub fn set_secure(&mut self, secure: bool) {
+    /// Sets the secure flag.
+    pub fn set_secure(&mut self, secure: bool) -> &mut Self {
         self.secure = secure;
+        self
     }
 
-    /// 是否仅 HTTP 访问
-    pub fn is_http_only(&self) -> bool {
-        self.http_only
-    }
-
-    /// 设置是否仅 HTTP 访问
-    pub fn set_http_only(&mut self, http_only: bool) {
+    /// Sets the HttpOnly flag.
+    pub fn set_http_only(&mut self, http_only: bool) -> &mut Self {
         self.http_only = http_only;
+        self
     }
 
-    /// 获取 SameSite 属性
-    pub fn same_site(&self) -> &str {
-        &self.same_site
+    /// Sets the SameSite policy.
+    pub fn set_same_site(&mut self, same_site: impl Into<String>) -> &mut Self {
+        self.same_site = Some(same_site.into());
+        self
     }
 
-    /// 设置 SameSite 属性
-    pub fn set_same_site(&mut self, same_site: impl Into<String>) {
-        self.same_site = same_site.into();
+    /// Replaces all extension attributes.
+    pub fn set_extra_attrs(&mut self, extra_attrs: BTreeMap<String, Option<String>>) -> &mut Self {
+        self.extra_attrs = extra_attrs;
+        self
+    }
+
+    /// Adds a valued extension attribute.
+    pub fn add_extra_attr(
+        &mut self,
+        name: impl Into<String>,
+        value: impl Into<String>,
+    ) -> &mut Self {
+        self.extra_attrs.insert(name.into(), Some(value.into()));
+        self
+    }
+
+    /// Adds a flag-only extension attribute.
+    pub fn add_extra_flag(&mut self, name: impl Into<String>) -> &mut Self {
+        self.extra_attrs.insert(name.into(), None);
+        self
+    }
+
+    /// Removes an extension attribute.
+    pub fn remove_extra_attr(&mut self, name: &str) -> &mut Self {
+        self.extra_attrs.remove(name);
+        self
     }
 }

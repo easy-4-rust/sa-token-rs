@@ -1,0 +1,29 @@
+[package]
+name = "sa-token-demo-askama"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Axum + Askama demo (maps Java sa-token-demo-thymeleaf → sa-token-demo-askama; Thymeleaf→Askama, Spring Boot→axum)"
+publish = false
+
+[[bin]]
+name = "sa-token-demo-askama"
+path = "src/main.rs"
+
+[dependencies]
+sa-token.workspace = true
+sa-token-web-axum.workspace = true
+sa-token-dao-memory.workspace = true
+sa-token-context-mock.workspace = true
+sa-token-askama.workspace = true
+askama.workspace = true
+axum = { workspace = true, features = ["macros"] }
+tokio.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+tower-http = { workspace = true, features = ["set-header"] }
+http.workspace = true
+
+[lints]
+workspace = true

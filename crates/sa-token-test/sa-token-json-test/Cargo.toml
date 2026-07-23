@@ -1,0 +1,19 @@
+[package]
+name = "sa-token-json-test"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "对应 Java sa-token-json-test：JSON 序列化模板契约（Jackson → serde）"
+publish = false
+
+[dev-dependencies]
+sa-token.workspace = true
+sa-token-core.workspace = true
+sa-token-context-mock.workspace = true
+sa-token-dao-memory.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+
+[lints]
+workspace = true

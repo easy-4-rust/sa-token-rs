@@ -12,12 +12,15 @@ serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 sha2.workspace = true
+sha1.workspace = true
+md-5.workspace = true
 hmac.workspace = true
 hex.workspace = true
 chrono.workspace = true
 
 [dev-dependencies]
 sa-token.workspace = true
+sa-token-dao-memory.workspace = true
 
 [lints]
 workspace = true

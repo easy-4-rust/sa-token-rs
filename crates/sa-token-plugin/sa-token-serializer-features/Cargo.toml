@@ -1,0 +1,14 @@
+[package]
+name = "sa-token-serializer-features"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Custom Base64 serializer features for sa-token-rs"
+
+[dependencies]
+sa-token-core.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

@@ -27,10 +27,10 @@
 |---|---|---|
 | 创建 workspace Cargo.toml | ⬜ | `Cargo.toml` |
 | 创建 sa-token-core 骨架（所有目录 + mod.rs） | ⬜ | `crates/sa-token-core/` |
-| 创建 sa-token-derive 骨架 | ⬜ | `crates/sa-token-derive/` |
-| 创建 sa-token-context-mock 骨架 | ⬜ | `crates/sa-token-context-mock/` |
+| 创建 sa-token-derive 骨架 | ⬜ | `crates/sa-token-support/sa-token-derive/` |
+| 创建 sa-token-context-mock 骨架 | ⬜ | `crates/sa-token-support/sa-token-context-mock/` |
 | 创建 sa-token facade 骨架 | ⬜ | `crates/sa-token/` |
-| 创建 sa-token-dao-memory 骨架 | ⬜ | `crates/sa-token-dao-memory/` |
+| 创建 sa-token-dao-memory 骨架 | ⬜ | `crates/sa-token-dao/sa-token-dao-memory/` |
 | 创建 sa-token-test 骨架 | ⬜ | `crates/sa-token-test/` |
 | 创建 CI 配置 | ⬜ | `.github/workflows/ci.yml` |
 | 创建 README.md | ⬜ | `README.md` |

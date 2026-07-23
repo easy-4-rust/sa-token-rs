@@ -1,0 +1,25 @@
+[package]
+name = "sa-token-demo-axum-jwt"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Axum JWT demo (maps Java sa-token-demo-jwt / Spring Boot)"
+publish = false
+
+[[bin]]
+name = "sa-token-demo-axum-jwt"
+path = "src/main.rs"
+
+[dependencies]
+sa-token = { workspace = true, features = ["jwt"] }
+sa-token-web-axum.workspace = true
+sa-token-dao-memory.workspace = true
+sa-token-jwt.workspace = true
+axum = { workspace = true, features = ["macros"] }
+tokio.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,25 @@
+[package]
+name = "sa-token-demo-actix-web"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Actix-web demo for sa-token-rs (maps Quarkus-style alternative to Spring Boot)"
+publish = false
+
+[[bin]]
+name = "sa-token-demo-actix-web"
+path = "src/main.rs"
+
+[dependencies]
+sa-token = { workspace = true, features = ["actix-web"] }
+sa-token-web-actix.workspace = true
+sa-token-dao-memory.workspace = true
+sa-token-core.workspace = true
+actix-web = { workspace = true, features = ["macros"] }
+tokio.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+
+[lints]
+workspace = true

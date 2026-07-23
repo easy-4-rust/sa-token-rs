@@ -21,10 +21,11 @@ v0.2.0 (Phase 2) ─── 权限与注解
     └── HttpBasic / HttpDigest / SameToken / TempToken
 
 v0.3.0 (Phase 3) ─── Web 框架适配
-    ├── sa-token-axum
-    ├── sa-token-actix-web
-    ├── sa-token-salvo
-    └── 四层路由保护 API
+    └── sa-token-web/
+        ├── sa-token-web-axum
+        ├── sa-token-web-actix
+        ├── sa-token-web-salvo
+        └── 四层路由保护 API
 
 v0.4.0 (Phase 4) ─── 存储扩展
     ├── sa-token-dao-redis（fred）
@@ -64,9 +65,9 @@ v1.0.0 (Phase 6) ─── 正式发布
 
 | 框架 | crate | 状态 |
 |---|---|---|
-| axum | `sa-token-axum` | Phase 3 |
-| actix-web | `sa-token-actix-web` | Phase 3 |
-| salvo | `sa-token-salvo` | Phase 3 |
+| axum | `sa-token-web-axum` | Phase 3 |
+| actix-web | `sa-token-web-actix` | Phase 3 |
+| salvo | `sa-token-web-salvo` | Phase 3 |
 | poem | `sa-token-poem` | 🔜 未来 |
 | rocket | `sa-token-rocket` | 🔜 未来 |
 | warp | `sa-token-warp` | 🔜 未来 |

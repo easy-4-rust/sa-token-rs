@@ -1,0 +1,23 @@
+[package]
+name = "sa-token-oauth2"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Sa-Token OAuth2 模块（对应 Java sa-token-oauth2）"
+
+[dependencies]
+async-trait.workspace = true
+sa-token-core = { workspace = true }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+sa-token-dao-memory.workspace = true
+tokio.workspace = true
+
+[lints]
+workspace = true

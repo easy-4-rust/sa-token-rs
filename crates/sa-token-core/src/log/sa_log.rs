@@ -52,19 +52,3 @@ pub trait SaLog: Send + Sync + 'static {
         self.log(SaLogLevel::Fatal, tag, message);
     }
 }
-
-/// 控制台日志实现
-pub struct SaLogForConsole;
-
-impl SaLog for SaLogForConsole {
-    fn log(&self, level: SaLogLevel, tag: &str, message: &str) {
-        match level {
-            SaLogLevel::Trace => tracing::trace!(tag = tag, message),
-            SaLogLevel::Debug => tracing::debug!(tag = tag, message),
-            SaLogLevel::Info => tracing::info!(tag = tag, message),
-            SaLogLevel::Warn => tracing::warn!(tag = tag, message),
-            SaLogLevel::Error => tracing::error!(tag = tag, message),
-            SaLogLevel::Fatal => tracing::error!(tag = tag, message),
-        }
-    }
-}

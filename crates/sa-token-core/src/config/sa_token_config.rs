@@ -2,6 +2,10 @@
 use serde::{Deserialize, Serialize};
 
 use super::sa_cookie_config::SaCookieConfig;
+use crate::stp::parameter::enums::sa_logout_mode::SaLogoutMode;
+use crate::stp::parameter::enums::sa_logout_range::SaLogoutRange;
+use crate::stp::parameter::enums::sa_replaced_login_exit_mode::SaReplacedLoginExitMode;
+use crate::stp::parameter::enums::sa_replaced_range::SaReplacedRange;
 
 /// Token 风格
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -20,6 +24,8 @@ pub enum SaTokenStyle {
     Base64,
     /// JWT
     Jwt,
+    /// Tik compact token.
+    Tik,
 }
 
 impl Default for SaTokenStyle {
@@ -38,6 +44,7 @@ impl std::fmt::Display for SaTokenStyle {
             Self::Random128 => write!(f, "random-128"),
             Self::Base64 => write!(f, "base64"),
             Self::Jwt => write!(f, "jwt"),
+            Self::Tik => write!(f, "tik"),
         }
     }
 }
@@ -51,32 +58,56 @@ pub struct SaTokenConfig {
     pub timeout: i64,
     /// Token 最低活跃频率（秒），-1 代表不限制
     pub active_timeout: i64,
+    /// Whether per-login dynamic active timeout is enabled.
+    pub dynamic_active_timeout: bool,
     /// 是否允许同一账号并发登录
     pub is_concurrent: bool,
     /// 多人登录同一账号时，是否共用一个 Token
     pub is_share: bool,
+    /// Which client gives up its session when concurrent login is disabled.
+    pub replaced_login_exit_mode: SaReplacedLoginExitMode,
+    /// Device range affected by replacement.
+    pub replaced_range: SaReplacedRange,
     /// 同一账号最大登录数量，-1 代表不限制
     pub max_login_count: i32,
+    /// Logout mode used when the login count overflows.
+    pub overflow_logout_mode: SaLogoutMode,
+    /// Maximum attempts used to generate a unique token.
+    pub max_try_times: i32,
     /// 是否尝试从 Body 里读取 Token
     pub is_read_body: bool,
     /// 是否尝试从 Header 里读取 Token
     pub is_read_header: bool,
     /// 是否尝试从 Cookie 里读取 Token
     pub is_read_cookie: bool,
+    /// Whether cookies persist after the browser closes.
+    pub is_lasting_cookie: bool,
     /// 是否输出操作日志
     pub is_log: bool,
+    /// Whether startup version art is printed.
+    pub is_print: bool,
+    /// Configured log level name.
+    pub log_level: String,
+    /// Numeric log level.
+    pub log_level_int: i32,
+    /// Optional colored-log override.
+    pub is_color_log: Option<bool>,
     /// Token 风格
     pub token_style: SaTokenStyle,
     /// Token 前缀
     pub token_prefix: String,
     /// 是否在登录后写入 Token 到响应头
     pub is_write_header: bool,
+    /// Default logout scope.
+    pub logout_range: SaLogoutRange,
+    /// Whether a frozen token retains logout operations.
+    pub is_logout_keep_freeze_ops: bool,
+    /// Whether logout keeps the token session.
+    pub is_logout_keep_token_session: bool,
     /// JWT 密钥
     pub jwt_secret_key: String,
     /// Cookie 配置
     pub cookie: SaCookieConfig,
-    /// 是否持久化 Cookie
-    pub is_lasting_cookie: bool,
     /// Cookie 自动填充前缀
     pub cookie_auto_fill_prefix: bool,
     /// 是否检查 Same-Token
@@ -85,6 +116,18 @@ pub struct SaTokenConfig {
     pub same_token_timeout: i64,
     /// 是否立即创建 Token-Session
     pub right_now_create_token_session: bool,
+    /// Default DAO expired-data cleanup interval.
+    pub data_refresh_period: i32,
+    /// Whether token-session reads require login.
+    pub token_session_check_login: bool,
+    /// Whether active timeout is renewed automatically.
+    pub auto_renew: bool,
+    /// Default HTTP Basic credentials.
+    pub http_basic: String,
+    /// Default HTTP Digest credentials.
+    pub http_digest: String,
+    /// Current public application domain.
+    pub curr_domain: Option<String>,
 }
 
 impl Default for SaTokenConfig {
@@ -93,23 +136,41 @@ impl Default for SaTokenConfig {
             token_name: "satoken".to_string(),
             timeout: 60 * 60 * 24 * 30,
             active_timeout: -1,
+            dynamic_active_timeout: false,
             is_concurrent: true,
-            is_share: true,
-            max_login_count: -1,
+            is_share: false,
+            replaced_login_exit_mode: SaReplacedLoginExitMode::default(),
+            replaced_range: SaReplacedRange::default(),
+            max_login_count: 12,
+            overflow_logout_mode: SaLogoutMode::default(),
+            max_try_times: 12,
             is_read_body: true,
             is_read_header: true,
             is_read_cookie: true,
-            is_log: true,
+            is_lasting_cookie: true,
+            is_log: false,
+            is_print: true,
+            log_level: "trace".to_owned(),
+            log_level_int: 1,
+            is_color_log: None,
             token_style: SaTokenStyle::Uuid,
             token_prefix: String::new(),
-            is_write_header: true,
+            is_write_header: false,
+            logout_range: SaLogoutRange::default(),
+            is_logout_keep_freeze_ops: false,
+            is_logout_keep_token_session: false,
             jwt_secret_key: String::new(),
             cookie: SaCookieConfig::default(),
-            is_lasting_cookie: true,
             cookie_auto_fill_prefix: false,
             check_same_token: false,
             same_token_timeout: 60 * 60 * 24,
             right_now_create_token_session: false,
+            data_refresh_period: 30,
+            token_session_check_login: true,
+            auto_renew: true,
+            http_basic: String::new(),
+            http_digest: String::new(),
+            curr_domain: None,
         }
     }
 }
@@ -120,9 +181,24 @@ impl SaTokenConfig {
         &self.token_name
     }
 
+    /// 获取 Token 名称的克隆版本
+    pub fn get_token_name(&self) -> String {
+        self.token_name.clone()
+    }
+
     /// 设置 Token 名称
     pub fn set_token_name(&mut self, name: impl Into<String>) {
         self.token_name = name.into();
+    }
+
+    /// 获取 Same-Token 超时时间
+    pub fn get_same_token_timeout(&self) -> i64 {
+        self.same_token_timeout
+    }
+
+    /// 设置 Same-Token 超时时间
+    pub fn set_same_token_timeout(&mut self, timeout: i64) {
+        self.same_token_timeout = timeout;
     }
 
     /// 获取 Token 超时时间

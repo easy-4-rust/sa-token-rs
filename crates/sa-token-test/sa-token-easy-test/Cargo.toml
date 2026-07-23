@@ -1,0 +1,26 @@
+[package]
+name = "sa-token-easy-test"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "对应 Java sa-token-easy-test：核心/无框架依赖的契约与 golden 测试"
+publish = false
+
+[dev-dependencies]
+sa-token.workspace = true
+sa-token-core.workspace = true
+sa-token-context-mock.workspace = true
+sa-token-dao-memory.workspace = true
+sa-token-apikey.workspace = true
+sa-token-serializer-features.workspace = true
+sa-token-jwt.workspace = true
+sa-token-sign.workspace = true
+sa-token-sso.workspace = true
+sa-token-oauth2.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+tokio.workspace = true
+
+[lints]
+workspace = true

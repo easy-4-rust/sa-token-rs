@@ -1,0 +1,21 @@
+//! Structured OAuth2 protocol failures.
+
+pub mod sa_oauth2_access_token_exception;
+pub mod sa_oauth2_access_token_scope_exception;
+pub mod sa_oauth2_authorization_code_exception;
+pub mod sa_oauth2_client_model_exception;
+pub mod sa_oauth2_client_model_scope_exception;
+pub mod sa_oauth2_client_token_exception;
+pub mod sa_oauth2_client_token_scope_exception;
+pub mod sa_oauth2_exception;
+pub mod sa_oauth2_refresh_token_exception;
+
+pub use sa_oauth2_access_token_exception::SaOAuth2AccessTokenException;
+pub use sa_oauth2_access_token_scope_exception::SaOAuth2AccessTokenScopeException;
+pub use sa_oauth2_authorization_code_exception::SaOAuth2AuthorizationCodeException;
+pub use sa_oauth2_client_model_exception::SaOAuth2ClientModelException;
+pub use sa_oauth2_client_model_scope_exception::SaOAuth2ClientModelScopeException;
+pub use sa_oauth2_client_token_exception::SaOAuth2ClientTokenException;
+pub use sa_oauth2_client_token_scope_exception::SaOAuth2ClientTokenScopeException;
+pub use sa_oauth2_exception::SaOAuth2Exception;
+pub use sa_oauth2_refresh_token_exception::SaOAuth2RefreshTokenException;

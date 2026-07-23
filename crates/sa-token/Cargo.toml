@@ -9,6 +9,14 @@ description = "Sa-Token-Rs: 轻量级权限认证框架"
 [features]
 default = []
 redis = ["dep:sa-token-dao-redis"]
+actix-web = ["dep:sa-token-web-actix"]
+salvo = ["dep:sa-token-web-salvo"]
+apikey = ["dep:sa-token-apikey"]
+serializer-features = ["dep:sa-token-serializer-features"]
+jwt = ["dep:sa-token-jwt"]
+temp-jwt = ["dep:sa-token-temp-jwt"]
+quick-login = ["dep:sa-token-quick-login"]
+sign = ["dep:sa-token-sign"]
 
 [dependencies]
 sa-token-core.workspace = true
@@ -16,6 +24,14 @@ sa-token-derive.workspace = true
 sa-token-context-mock.workspace = true
 sa-token-dao-memory.workspace = true
 sa-token-dao-redis = { workspace = true, optional = true }
+sa-token-web-actix = { workspace = true, optional = true }
+sa-token-web-salvo = { workspace = true, optional = true }
+sa-token-apikey = { workspace = true, optional = true }
+sa-token-serializer-features = { workspace = true, optional = true }
+sa-token-jwt = { workspace = true, optional = true }
+sa-token-temp-jwt = { workspace = true, optional = true }
+sa-token-quick-login = { workspace = true, optional = true }
+sa-token-sign = { workspace = true, optional = true }
 
 [lints]
 workspace = true

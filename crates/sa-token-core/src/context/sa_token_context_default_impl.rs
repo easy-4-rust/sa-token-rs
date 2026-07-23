@@ -2,12 +2,22 @@
 use std::sync::Arc;
 
 use super::{
-    model::{sa_request::SaRequest, sa_response::SaResponse, sa_storage::SaStorage},
+    model::{
+        sa_request::SaRequest, sa_response::SaResponse, sa_storage::SaStorage,
+        sa_token_context_model_box::SaTokenContextModelBox,
+    },
     sa_token_context::SaTokenContext,
+    sa_token_context_error::raise_invalid_context_handler,
 };
 
-/// 默认上下文实现（不做任何操作，用于非 Web 环境）
+/// 错误提示语（对应 Java `ERROR_MESSAGE`）
+pub const ERROR_MESSAGE: &str = "未能获取有效的上下文处理器";
+
+/// 默认上下文实现
 pub struct SaTokenContextDefaultImpl;
+
+/// 默认实例（对应 Java `defaultContext`）
+pub static DEFAULT_CONTEXT: SaTokenContextDefaultImpl = SaTokenContextDefaultImpl;
 
 impl SaTokenContext for SaTokenContextDefaultImpl {
     fn set_context(
@@ -16,26 +26,18 @@ impl SaTokenContext for SaTokenContextDefaultImpl {
         _res: Arc<dyn SaResponse>,
         _stg: Arc<dyn SaStorage>,
     ) {
-        // 默认实现不存储上下文
+        raise_invalid_context_handler();
     }
 
     fn clear_context(&self) {
-        // 默认实现不存储上下文
+        raise_invalid_context_handler();
     }
 
     fn is_valid(&self) -> bool {
-        false
+        raise_invalid_context_handler();
     }
 
-    fn request(&self) -> Arc<dyn SaRequest> {
-        panic!("No SaRequest available in default context")
-    }
-
-    fn response(&self) -> Arc<dyn SaResponse> {
-        panic!("No SaResponse available in default context")
-    }
-
-    fn storage(&self) -> Arc<dyn SaStorage> {
-        panic!("No SaStorage available in default context")
+    fn model_box(&self) -> SaTokenContextModelBox {
+        raise_invalid_context_handler();
     }
 }
