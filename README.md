@@ -8,6 +8,9 @@
 
 **Sa-Token-Rs** 是 [Sa-Token](https://sa-token.cc/) 的 Rust 一比一移植版，提供登录认证、权限认证、会话管理、踢人下线等全家桶能力。
 
+> 仓库地址：<https://github.com/easy-4-rust/sa-token-rs>
+> 文档站：<https://easy-4-rust.github.io/sa-token-rs/>
+
 ## 特性
 
 - 🚀 **登录认证** — 一行代码完成登录
@@ -174,15 +177,122 @@ sa-token-rs/
 
 ## 与 Java Sa-Token 的对应关系
 
-| Java Sa-Token | Sa-Token-Rs |
-|---|---|
-| `StpUtil.login(id)` | `StpUtil::login(id)` |
-| `StpUtil.isLogin()` | `StpUtil::is_login()` |
-| `StpUtil.checkPermission(p)` | `StpUtil::check_permission(p)` |
-| `@SaCheckLogin` | `#[sa_check_login]` |
-| `@SaCheckPermission("x")` | `#[sa_check_permission("x")]` |
-| `SaSession` | `SaSession` |
-| `SaTokenDao` | `SaTokenDao` trait |
+| 维度 | Java Sa-Token | Sa-Token-Rs |
+|---|---|---|
+| 包坐标 | `cn.dev33.satoken:sa-token-core` | `sa-token = "0.1"` |
+| 静态门面 | `StpUtil.login(id)` | `StpUtil::login("10001")?` |
+| 布尔查询 | `StpUtil.isLogin()` | `StpUtil::is_login()` |
+| 异常检查 | `StpUtil.checkPermission(p)` | `StpUtil::check_permission(p)?` |
+| 注解 | `@SaCheckLogin` | `#[sa_check_login]` |
+| 注解（带参） | `@SaCheckPermission("x")` | `#[sa_check_permission("x")]` |
+| 会话模型 | `SaSession` | `SaSession` |
+| 持久化接口 | `SaTokenDao` | `SaTokenDao` trait |
+| 配置载体 | `application.yml` | `config.toml`（可选）或 `SaTokenConfig::default()` |
+| 请求上下文 | `SaHolder.getRequest()` | `SaHolder::request()?` |
+| 异常类型 | `NotLoginException` 等 20+ | `SaTokenException::NotLogin` 等单一 enum |
+| 启动器 | `sa-token-spring-boot-starter` | `sa-token-web-axum = "0.1"` |
+
+### 双侧示例：登录与权限校验
+
+**Java Sa-Token：**
+
+```java
+// application.yml
+sa-token:
+  token-name: satoken
+  timeout: 2592000
+  is-concurrent: true
+
+// 业务代码
+@RestController
+public class UserController {
+    @PostMapping("/login")
+    public String login(String id) {
+        StpUtil.login(id);                 // 登录
+        return StpUtil.getTokenValue();    // 返回 Token
+    }
+
+    @SaCheckPermission("user:add")
+    @PostMapping("/user/add")
+    public void addUser() {
+        // 注解自动校验权限，未通过抛 NotPermissionException
+    }
+}
+```
+
+**Sa-Token-Rs：**
+
+```rust
+// config.toml（可选，与 application.yml 等价）
+[sa_token]
+token_name = "satoken"
+timeout = 2592000
+is_concurrent = true
+
+// 业务代码（axum 0.8）
+use axum::{routing::post, Router, Json};
+use sa_token::prelude::*;
+use sa_token_web_axum::SaTokenLayer;
+
+#[tokio::main]
+async fn main() {
+    let app = Router::new()
+        .route("/login", post(login))
+        .route("/user/add", post(add_user))
+        .layer(SaTokenLayer::new());
+    // ...
+}
+
+async fn login(Json(id): Json<String>) -> SaResult<Json<String>> {
+    StpUtil::login(&id)?;
+    Ok(Json(StpUtil::get_token_value().unwrap_or_default()))
+}
+
+#[sa_check_permission("user:add")]
+async fn add_user() -> SaResult<Json<&'static str>> {
+    Ok(Json("ok"))
+}
+```
+
+### Cargo.toml 完整配置
+
+**最小依赖**（仅核心 + Mock）：
+
+```toml
+[dependencies]
+sa-token = "0.1"
+tokio = { version = "1", features = ["full"] }
+```
+
+**完整依赖**（核心 + Web 适配 + Redis DAO + 插件）：
+
+```toml
+[dependencies]
+sa-token = "0.1"                          # 核心门面
+sa-token-web-axum = "0.1"                 # axum 0.8 适配
+sa-token-dao-redis = "0.1"                # 生产级 Redis DAO（async，基于 fred）
+sa-token-jwt = "0.1"                      # JWT Token 插件
+sa-token-sign = "0.1"                     # API 参数签名校验
+sa-token-sso = "0.1"                      # SSO 单点登录
+sa-token-oauth2 = "0.1"                   # OAuth2（含 OIDC）
+sa-token-apikey = "0.1"                   # API Key 鉴权
+tokio = { version = "1", features = ["full"] }
+axum = "0.8"
+fred = "9"                                # Redis 客户端（sa-token-dao-redis 依赖）
+```
+
+**Java vs Rust 配置文件对照：**
+
+| 维度 | Java | Rust |
+|---|---|---|
+| 依赖声明 | `pom.xml` / `build.gradle` | `Cargo.toml` `[dependencies]` |
+| 配置文件 | `application.yml` / `application.properties` | `config.toml`（可选） |
+| 加载方式 | Spring Boot 自动绑定 | `toml::from_str` + `SaManager::set_config` |
+| 配置对象 | `SaTokenConfig`（Spring Bean） | `SaTokenConfig`（`Arc<SaTokenConfig>`） |
+| 热更新 | Spring Cloud Refresh | 需手动 `SaManager::set_config` |
+| Profile 切换 | `spring.profiles.active` | `[features]` + `--features` |
+
+> **说明**：Sa-Token-Rs 的 `SaTokenConfig` 已实现 `serde::Deserialize`，可通过 TOML/JSON 反序列化加载；如需 YAML，可由用户自行加上 `serde_yaml` crate。
 
 ## 测试
 
@@ -212,4 +322,4 @@ Apache License 2.0
 ## 致谢
 
 - [Sa-Token](https://sa-token.cc/) — Java 原版
-- [easyexcel-rs](https://github.com/hiwepy/easyexcel-rs) — Java→Rust 移植参考
+- [easyexcel-rs](https://github.com/easy-4-rust/easyexcel-rs) — Java→Rust 移植参考

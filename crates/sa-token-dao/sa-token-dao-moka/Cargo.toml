@@ -1,0 +1,22 @@
+[package]
+name = "sa-token-dao-moka"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "High-performance in-memory DAO adapter for sa-token-rs, backed by moka (Java Caffeine equivalent)"
+
+[dependencies]
+sa-token-core.workspace = true
+serde_json.workspace = true
+moka = { version = "0.12", features = ["future"] }
+tokio = { version = "1", features = ["sync", "time", "rt", "rt-multi-thread", "macros"] }
+async-trait.workspace = true
+
+[dev-dependencies]
+sa-token.workspace = true
+sa-token-context-mock.workspace = true
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
+
+[lints]
+workspace = true

@@ -1,18 +1,32 @@
 # 会话查询
 
---- 
+---
+
+> Sa-Token → Sa-Token-Rs。单账号终端列表用 `get_terminal_list_by_login_id`；全局检索底层走 DAO `search_data`（若 `StpUtil` 尚未封装 `search_*` 门面，可直接用 DAO / logic）。
+
+| Java | Rust |
+|---|---|
+| `StpUtil.getTerminalListByLoginId` | `StpUtil::get_terminal_list_by_login_id` |
+| `StpUtil.searchTokenValue` | DAO `search_data` / 待封装的 `search_token_value` |
+| `SaTerminalInfo` | `SaTerminalInfo`（字段 snake_case） |
 
 ### 1、单账号会话查询
 
-使用 `StpUtil.getTerminalListByLoginId( loginId )` 可获取指定账号已登录终端列表信息，例如：
+使用 `StpUtil::get_terminal_list_by_login_id(login_id)` 可获取指定账号已登录终端列表信息，例如：
 
-``` java
-public static void main(String[] args) {
-	System.out.println("账号 10001 登录设备信息：");
-	List<SaTerminalInfo> terminalList = StpUtil.getTerminalListByLoginId(10001);
-	for (SaTerminalInfo ter : terminalList) {
-		System.out.println("登录index=" + ter.getIndex() + ", 设备type=" + ter.getDeviceType() + ", token=" + ter.getTokenValue() + ", 登录time=" + ter.getCreateTime());
-	}
+``` rust
+use sa_token::prelude::*;
+
+fn main() -> SaResult<()> {
+    println!("账号 10001 登录设备信息：");
+    let terminal_list = StpUtil::get_terminal_list_by_login_id("10001")?;
+    for ter in terminal_list {
+        println!(
+            "登录index={}, 设备type={}, token={}, 登录time={}",
+            ter.index, ter.device_type, ter.token_value, ter.create_time
+        );
+    }
+    Ok(())
 }
 ```
 
@@ -27,83 +41,100 @@ public static void main(String[] args) {
 
 一个 `SaTerminalInfo` 对象代表一个终端信息，其有如下字段：
 
-``` java
-terminal.getIndex();   // 登录会话索引值 (该账号第几个登录的设备)
-terminal.getDeviceType();   // 所属设备类型，例如：PC、WEB、HD、MOBILE、APP
-terminal.getTokenValue();   // 此次登录的token值
-terminal.getCreateTime();   // 登录时间, 13位时间戳
-terminal.getDeviceId();   // 设备id, 设备唯一标识
-terminal.getExtra("key");  // 此次登录的额外自定义参数 
+``` rust
+ter.index;        // 登录会话索引值 (该账号第几个登录的设备)
+ter.device_type;  // 所属设备类型，例如：PC、WEB、HD、MOBILE、APP
+ter.token_value;  // 此次登录的token值
+ter.create_time;  // 登录时间
+ter.device_id;    // 设备id, 设备唯一标识
+ter.get_extra("key");  // 此次登录的额外自定义参数
 ```
 
-`Extra` 自定义参数可以在登录时通过如下方式指定: 
-``` java
-StpUtil.login(10001, new SaLoginParameter().setTerminalExtra("key", "value"));
+`Extra` 自定义参数可以在登录时通过如下方式指定:
+``` rust
+use serde_json::json;
+use sa_token::prelude::*;
+
+let param = SaLoginParameter::create()
+    .set_terminal_extra_data(json!({ "key": "value" }));
+StpUtil::login_with_param("10001", &param)?;
 ```
 
 
 
-### 2、全部会话检索 
+### 2、全部会话检索
 
-``` java
-// 查询所有已登录的 Token
-StpUtil.searchTokenValue(String keyword, int start, int size, boolean sortType);
-
-// 查询所有 Account-Session 会话
-StpUtil.searchSessionId(String keyword, int start, int size, boolean sortType);
-
-// 查询所有 Token-Session 会话
-StpUtil.searchTokenSessionId(String keyword, int start, int size, boolean sortType);
+``` rust
+// 查询所有已登录的 Token / Session —— Java:
+// StpUtil.searchTokenValue(keyword, start, size, sortType);
+// StpUtil.searchSessionId(...);
+// StpUtil.searchTokenSessionId(...);
+//
+// Rust：底层为 SaTokenDao::search_data(prefix, keyword, start, size, ascending)
+let dao = SaManager::sa_token_dao();
+let token_keys = dao.search_data("satoken:login:token:", "1000", 0, 10, true)?;
 ```
 
 
 #### 参数详解：
 - `keyword`: 查询关键字，只有包括这个字符串的 token 值才会被查询出来。
 - `start`: 数据开始处索引。
-- `size`: 要获取的数据条数 （值为-1代表一直获取到末尾）。 
-- `sortType`: 排序方式（true=正序：先登录的在前，false=反序：后登录的在前）。
+- `size`: 要获取的数据条数 （值为-1代表一直获取到末尾）。
+- `sortType` / `ascending`: 排序方式（true=正序：先登录的在前，false=反序：后登录的在前）。
 
 简单样例：
-``` java
+``` rust
 // 查询 value 包括 1000 的所有 token，结果集从第 0 条开始，返回 10 条
-List<String> tokenList = StpUtil.searchTokenValue("1000", 0, 10, true);	
-for (String token : tokenList) {
-	System.out.println(token);
+let token_list = SaManager::sa_token_dao()
+    .search_data("satoken:login:token:", "1000", 0, 10, true)?;
+for token in token_list {
+    println!("{token}");
 }
 ```
 
-#### 深入：`StpUtil.searchTokenValue` 和 `StpUtil.searchSessionId` 的区别？
+#### 深入：`searchTokenValue` 和 `searchSessionId` 的区别？
 
-- StpUtil.searchTokenValue 查询的是登录产生的所有 Token。 
-- StpUtil.searchSessionId 查询的是所有已登录账号会话id。 
+- `searchTokenValue` 查询的是登录产生的所有 Token。
+- `searchSessionId` 查询的是所有已登录账号会话id。
 
 举个例子，项目配置如下：
-``` yml
-sa-token: 
-	# 允许同一账号在多个设备一起登录
-	is-concurrent: true
-	# 同一账号每次登录产生不同的token
-	is-share: false
+``` rust
+use std::sync::Arc;
+use sa_token::prelude::*;
+
+SaManager::set_config(Arc::new(SaTokenConfig {
+    // 允许同一账号在多个设备一起登录
+    is_concurrent: true,
+    // 同一账号每次登录产生不同的token
+    is_share: false,
+    ..Default::default()
+}));
 ```
 
 假设此时账号A在 电脑、手机、平板 依次登录（共3次登录），账号B在 电脑、手机 依次登录（共2次登录），那么：
 
-- `StpUtil.searchTokenValue` 将返回一共 5 个Token。
-- `StpUtil.searchSessionId` 将返回一共 2 个 SessionId。
+- `searchTokenValue` 将返回一共 5 个Token。
+- `searchSessionId` 将返回一共 2 个 SessionId。
 
 综上，若要遍历系统所有已登录的会话，代码将大致如下：
-``` java
-// 获取所有已登录的会话id
-List<String> sessionIdList = StpUtil.searchSessionId("", 0, -1, false);
+``` rust
+// 获取所有已登录的会话id（prefix 以实现为准）
+let session_id_list = SaManager::sa_token_dao()
+    .search_data("satoken:login:session:", "", 0, -1, false)?;
 
-for (String sessionId : sessionIdList) {
-	
-	// 根据会话id，查询对应的 SaSession 对象，此处一个 SaSession 对象即代表一个登录的账号 
-	SaSession session = StpUtil.getSessionBySessionId(sessionId);
-	
-	// 查询这个账号都在哪些设备登录了，依据上面的示例，账号A 的 SaTerminalInfo 数量是 3，账号B 的 SaTerminalInfo 数量是 2 
-	List<SaTerminalInfo> terminalList = session.terminalListCopy();
-	System.out.println("会话id：" + sessionId + "，共在 " + terminalList.size() + " 设备登录");
+for session_id in session_id_list {
+    // 根据会话id，查询对应的 SaSession 对象
+    let session = SaManager::sa_token_dao()
+        .get_session(&session_id)?
+        .expect("session");
+
+    // 查询这个账号都在哪些设备登录了
+    let terminal_list = session.terminal_list();
+    println!(
+        "会话id：{}，共在 {} 设备登录",
+        session_id,
+        terminal_list.len()
+    );
 }
 ```
 
@@ -119,15 +150,13 @@ for (String sessionId : sessionIdList) {
 请根据业务实际水平合理调用API。
 
 
-> [!WARNING| label:注意] 
+> [!WARNING| label:注意]
 > 基于活跃 Token 的统计方式会比实际情况略有延迟，如果需要精确统计实时在线用户信息需要采用 WebSocket。
 
 
---- 
+---
 
-<a class="case-btn" href="https://gitee.com/dromara/sa-token/blob/master/sa-token-demo/sa-token-demo-case/src/main/java/com/pj/cases/up/SearchSessionController.java"
+<a class="case-btn" href="https://github.com/sa-token-rust/sa-token-rs/tree/main/crates/sa-token-demo"
 	target="_blank">
-	本章代码示例：Sa-Token 会话查询  —— [ SearchSessionController.java ]
+	本章代码示例：Sa-Token-Rs 会话查询 —— 参考 demo / DAO search_data
 </a>
-
-

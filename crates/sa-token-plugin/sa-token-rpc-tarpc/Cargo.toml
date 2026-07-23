@@ -1,0 +1,17 @@
+[package]
+name = "sa-token-rpc-tarpc"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "tarpc (Google Rust RPC) middleware for sa-token-rs"
+
+[dependencies]
+sa-token-core.workspace = true
+sa-token-context-mock.workspace = true
+async-trait.workspace = true
+tokio.workspace = true
+tarpc.workspace = true
+
+[lints]
+workspace = true

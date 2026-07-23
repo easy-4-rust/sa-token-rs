@@ -1,6 +1,14 @@
 # 前后端分离（无Cookie模式）
 --- 
 
+> Sa-Token → Sa-Token-Rs；示例改为 axum + Rust。
+
+| Java | Rust |
+|---|---|
+| `StpUtil.login(10001)` | `StpUtil::login("10001")?` |
+| `StpUtil.getTokenInfo()` | `StpUtil::get_token_info()?` |
+| `@RequestMapping` | axum handler |
+
 ### 何为无 Cookie 模式? 
 
 无 Cookie 模式：特指不支持 Cookie 功能的终端，通俗来讲就是我们常说的 —— **前后端分离模式**。
@@ -20,21 +28,42 @@
 
 ### 1、后端将 token 返回到前端
 
-1. 首先调用 `StpUtil.login(id)` 进行登录。
-2. 调用 `StpUtil.getTokenInfo()` 返回当前会话的 token 详细参数。
-	- 此方法返回一个对象，其有两个关键属性：`tokenName`和`tokenValue`（token 的名称和 token 的值）。
+1. 首先调用 `StpUtil::login(id)` 进行登录。
+2. 调用 `StpUtil::get_token_info()` 返回当前会话的 token 详细参数。
+	- 此方法返回一个对象，其有两个关键属性：`token_name` / `tokenName` 和 `token_value` / `tokenValue`（token 的名称和 token 的值，字段名以 `SaTokenInfo` 为准）。
 	- 将此对象传递到前台，让前端人员将这两个值保存到本地。
 
 代码示例：
+``` rust
+use axum::Json;
+use sa_token::prelude::*;
+use serde_json::{json, Value};
+
+/// 登录接口 —— 前后端分离：显式返回 token
+async fn do_login() -> SaResult<Json<Value>> {
+    // 第1步，先登录上
+    StpUtil::login("10001")?;
+    // 第2步，获取 Token 相关参数
+    let token_info = StpUtil::get_token_info()?;
+    // 第3步，返回给前端
+    Ok(Json(json!({
+        "code": 200,
+        "data": {
+            "tokenName": StpUtil::get_token_name(),
+            "tokenValue": StpUtil::get_token_value(),
+            "tokenInfo": format!("{token_info:?}")
+        }
+    })))
+}
+```
+
+Java 对照：
+
 ``` java
-// 登录接口
 @RequestMapping("doLogin")
 public SaResult doLogin() {
-	// 第1步，先登录上 
 	StpUtil.login(10001);
-	// 第2步，获取 Token  相关参数 
 	SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
-	// 第3步，返回给前端 
 	return SaResult.data(tokenInfo);
 }
 ```
@@ -91,7 +120,7 @@ uni.request({
 });
 ```
 
-4. 只要按照如此方法将`token`值传递到后端，Sa-Token 就能像传统PC端一样自动读取到 token 值，进行鉴权。
+4. 只要按照如此方法将`token`值传递到后端，Sa-Token-Rs 就能像传统PC端一样自动读取到 token 值，进行鉴权。
 5. 你可能会有疑问，难道我每个`ajax`都要写这么一坨？岂不是麻烦死了？
 	- 你当然不能每个 ajax 都写这么一坨，因为这种重复性代码都是要封装在一个函数里统一调用的。
 
@@ -104,7 +133,7 @@ uni.request({
 
 ---
 
-<a class="case-btn" href="https://gitee.com/dromara/sa-token/blob/master/sa-token-demo/sa-token-demo-case/src/main/java/com/pj/cases/up/NotCookieController.java"
+<a class="case-btn" href="https://github.com/easy-4-rust/sa-token-rs/tree/main/crates/sa-token-demo/sa-token-demo-axum"
 	target="_blank">
-	本章代码示例：Sa-Token 前后端分离样例 —— [ NotCookieController.java ]
+	本章代码示例：Sa-Token-Rs 前后端分离样例 —— [ sa-token-demo-axum ]
 </a>

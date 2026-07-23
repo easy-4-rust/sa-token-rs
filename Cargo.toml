@@ -6,11 +6,17 @@ members = [
     "crates/sa-token-web/sa-token-web-axum",
     "crates/sa-token-web/sa-token-web-actix",
     "crates/sa-token-web/sa-token-web-salvo",
+    "crates/sa-token-web/sa-token-web-poem",
+    "crates/sa-token-web/sa-token-web-rocket",
+    "crates/sa-token-web/sa-token-web-warp",
     "crates/sa-token-core",
     "crates/sa-token-support/sa-token-derive",
     "crates/sa-token-support/sa-token-context-mock",
     "crates/sa-token-dao/sa-token-dao-memory",
     "crates/sa-token-dao/sa-token-dao-redis",
+    "crates/sa-token-dao/sa-token-dao-moka",
+    "crates/sa-token-dao/sa-token-dao-redis-pool",
+    "crates/sa-token-dao/sa-token-dao-sweeper",
     "crates/sa-token-plugin/sa-token-jwt",
     "crates/sa-token-plugin/sa-token-temp-jwt",
     "crates/sa-token-plugin/sa-token-quick-login",
@@ -19,6 +25,13 @@ members = [
     "crates/sa-token-plugin/sa-token-oauth2",
     "crates/sa-token-plugin/sa-token-apikey",
     "crates/sa-token-plugin/sa-token-serializer-features",
+    "crates/sa-token-plugin/sa-token-json-simd",
+    "crates/sa-token-plugin/sa-token-json-sonic",
+    "crates/sa-token-plugin/sa-token-rpc-tonic",
+    "crates/sa-token-plugin/sa-token-rpc-volo",
+    "crates/sa-token-plugin/sa-token-rpc-tarpc",
+    "crates/sa-token-plugin/sa-token-http-reqwest",
+    "crates/sa-token-plugin/sa-token-remember-me",
     "crates/sa-token-plugin/sa-token-tera",
     "crates/sa-token-plugin/sa-token-askama",
     "crates/sa-token-demo/sa-token-demo-axum",
@@ -72,18 +85,24 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.88"
 license = "Apache-2.0"
-repository = "https://github.com/dromara/sa-token-rs"
+repository = "https://github.com/easy-4-rust/sa-token-rs"
 
 [workspace.dependencies]
 sa-token = { version = "=0.1.0", path = "crates/sa-token" }
 sa-token-web-axum = { version = "=0.1.0", path = "crates/sa-token-web/sa-token-web-axum" }
 sa-token-web-actix = { version = "=0.1.0", path = "crates/sa-token-web/sa-token-web-actix" }
 sa-token-web-salvo = { version = "=0.1.0", path = "crates/sa-token-web/sa-token-web-salvo" }
+sa-token-web-poem = { version = "=0.1.0", path = "crates/sa-token-web/sa-token-web-poem" }
+sa-token-web-rocket = { version = "=0.1.0", path = "crates/sa-token-web/sa-token-web-rocket" }
+sa-token-web-warp = { version = "=0.1.0", path = "crates/sa-token-web/sa-token-web-warp" }
 sa-token-core = { version = "=0.1.0", path = "crates/sa-token-core" }
 sa-token-derive = { version = "=0.1.0", path = "crates/sa-token-support/sa-token-derive" }
 sa-token-context-mock = { version = "=0.1.0", path = "crates/sa-token-support/sa-token-context-mock" }
 sa-token-dao-memory = { version = "=0.1.0", path = "crates/sa-token-dao/sa-token-dao-memory" }
 sa-token-dao-redis = { version = "=0.1.0", path = "crates/sa-token-dao/sa-token-dao-redis" }
+sa-token-dao-moka = { version = "=0.1.0", path = "crates/sa-token-dao/sa-token-dao-moka" }
+sa-token-dao-redis-pool = { version = "=0.1.0", path = "crates/sa-token-dao/sa-token-dao-redis-pool" }
+sa-token-dao-sweeper = { version = "=0.1.0", path = "crates/sa-token-dao/sa-token-dao-sweeper" }
 sa-token-jwt = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-jwt" }
 sa-token-temp-jwt = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-temp-jwt" }
 sa-token-quick-login = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-quick-login" }
@@ -92,6 +111,11 @@ sa-token-sso = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-sso
 sa-token-oauth2 = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-oauth2" }
 sa-token-apikey = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-apikey" }
 sa-token-serializer-features = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-serializer-features" }
+sa-token-rpc-tonic = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-rpc-tonic" }
+sa-token-rpc-volo = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-rpc-volo" }
+sa-token-rpc-tarpc = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-rpc-tarpc" }
+sa-token-http-reqwest = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-http-reqwest" }
+sa-token-remember-me = { version = "=0.1.0", path = "crates/sa-token-plugin/sa-token-remember-me" }
 
 # 外部依赖
 axum = { version = "0.8" }
@@ -124,6 +148,7 @@ rand = "0.10"
 regex = "1"
 url = "2"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+tarpc = { version = "0.34", default-features = false, features = ["serde-transport", "tokio1"] }
 proc-macro2 = "1"
 quote = "1"
 syn = { version = "2", features = ["full"] }

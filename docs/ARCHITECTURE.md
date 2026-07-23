@@ -39,15 +39,15 @@
 
 ### 1.2 核心设计原则
 
-| 原则 | 决策 | 原因 |
-|---|---|---|
-| 异步模型 | **核心同步 + starter async** | 复刻 Java 阻塞语义；核心无 IO 时 async 无收益 |
-| 全局状态 | `OnceLock<Arc<T>>` | 借鉴 easyexcel-rs；OnceLock 设置一次后只读 |
-| 请求上下文 | `thread_local!`（核心）/ `task_local!`（async） | 对齐 Java ThreadLocal |
-| 组件注入 | `Arc<dyn Trait>` + `SaManager::set_xxx()` | 对齐 Java SaManager |
-| 错误处理 | `thiserror` 单一 enum | 折叠 Java 20+ 异常类；实现 Clone+Eq 用于测试 |
-| 注解 AOP | proc-macro 编译期生成 | Rust 无运行时反射 |
-| 元数据存储 | `&'static [T]` 常量 + `const fn` | 编译期烤进二进制，运行时零开销 |
+| 原则 | 决策 | 原因 | 对应 Java |
+|---|---|---|---|
+| 异步模型 | **核心同步 + starter async** | 复刻 Java 阻塞语义；核心无 IO 时 async 无收益 | Sa-Token Java 同步 API |
+| 全局状态 | `OnceLock<Arc<T>>` | 借鉴 easyexcel-rs；OnceLock 设置一次后只读 | Spring `@Bean` 单例 |
+| 请求上下文 | `thread_local!`（核心）/ `task_local!`（async） | 对齐 Java ThreadLocal | `SaHolder`（基于 ThreadLocal） |
+| 组件注入 | `Arc<dyn Trait>` + `SaManager::set_xxx()` | 对齐 Java SaManager | `SaManager.setXxx()` 静态方法 |
+| 错误处理 | `thiserror` 单一 enum | 折叠 Java 20+ 异常类；实现 Clone+Eq 用于测试 | `RuntimeException` 体系（20+ 子类） |
+| 注解 AOP | proc-macro 编译期生成 | Rust 无运行时反射 | Spring AOP 运行时反射 |
+| 元数据存储 | `&'static [T]` 常量 + `const fn` | 编译期烤进二进制，运行时零开销 | 静态常量池 |
 
 ---
 
@@ -260,12 +260,15 @@ impl<S> Layer<S> for SaTokenAxumLayer { ... }
 
 ### 5.2 四层路由保护 API
 
-| 层级 | API | 场景 |
-|---|---|---|
-| **宏** | `#[sa_check_permission("user:add")]` | 对齐 Java 注解，Sa-Token 用户无缝迁移 |
-| **Extractor** | `RequirePermission<"user:add">` | Rust idiomatic，类型安全 |
-| **Layer** | `.layer(RequirePermissionLayer::new("admin"))` | 批量保护路由组 |
-| **策略文件** | `SaPolicyLayer::from_file("policy.ron")` | 复杂 ABAC，对接 casbin/cedar |
+| 层级 | API | 对应 Java 注解 | 场景 |
+|---|---|---|---|
+| **宏** | `#[sa_check_permission("user:add")]` | `@SaCheckPermission("user:add")` | 对齐 Java 注解，Sa-Token 用户无缝迁移 |
+| **宏** | `#[sa_check_login]` | `@SaCheckLogin` | 登录态校验 |
+| **宏** | `#[sa_check_role("admin")]` | `@SaCheckRole("admin")` | 角色校验 |
+| **宏** | `#[sa_check_safe]` | `@SaCheckSafe` | 二级认证校验 |
+| **Extractor** | `RequirePermission<"user:add">` | `@SaCheckPermission` + Controller 注入 | Rust idiomatic，类型安全 |
+| **Layer** | `.layer(RequirePermissionLayer::new("admin"))` | `WebMvcConfigurer.addInterceptors` | 批量保护路由组 |
+| **策略文件** | `SaPolicyLayer::from_file("policy.ron")` | Sa-Token 无对应能力 | 复杂 ABAC，对接 casbin/cedar |
 
 ---
 
@@ -306,4 +309,4 @@ StpUtil::kickout("10001")        Redis 订阅 sa:kickout 频道
 - [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) - 完整实施计划
 - [GUIDE.md](./GUIDE.md) - 使用指南
 - [migration/object-method-matrix.md](./migration/object-method-matrix.md) - 方法级对照表
-- **easyexcel-rs** 架构参考：`/Users/wandl/workspaces/workspace-github/easyexcel-rs/docs/ARCHITECTURE.md`
+- **easyexcel-rs** 架构参考：<https://github.com/easy-4-rust/easyexcel-rs/blob/main/docs/ARCHITECTURE.md>

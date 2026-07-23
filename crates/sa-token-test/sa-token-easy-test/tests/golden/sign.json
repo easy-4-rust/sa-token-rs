@@ -1,0 +1,6 @@
+{
+  "sign_default_digest": "md5",
+  "sign_default_timestamp_disparity": 900000,
+  "sign_md5": "9f565ccd686cfa5dc3b06b3a89e4e3ad",
+  "source_commit": "902886c2149261ccb53a9c982068b7ccd0990237"
+}

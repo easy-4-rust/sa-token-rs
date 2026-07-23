@@ -1,0 +1,9 @@
+{
+  "api_key_invalid_code": 12301,
+  "api_key_prefix": "AK-",
+  "api_key_record_index": true,
+  "api_key_save_key": "satoken:apikey:AK-TEST",
+  "api_key_scope_code": 12311,
+  "api_key_timeout": 2592000,
+  "source_commit": "902886c2149261ccb53a9c982068b7ccd0990237"
+}

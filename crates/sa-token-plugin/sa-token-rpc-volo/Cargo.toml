@@ -1,0 +1,18 @@
+[package]
+name = "sa-token-rpc-volo"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "volo gRPC (ByteDance) middleware for sa-token-rs (Java sa-token-dubbo3 equivalent)"
+
+[dependencies]
+sa-token-core.workspace = true
+sa-token-context-mock.workspace = true
+async-trait.workspace = true
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[lints]
+workspace = true

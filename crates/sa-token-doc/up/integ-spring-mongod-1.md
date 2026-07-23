@@ -1,13 +1,23 @@
-# Sa-Token 集成 MongoDB 
+# Sa-Token-Rs 集成 MongoDB 
 --- 
 
-此章介绍如何通过扩展 `SaTokenDao` 接口来实现 MongodDB 的集成。
+> Sa-Token → Sa-Token-Rs。Java Spring Data MongoDB → Rust `mongodb` crate + 自定义 `SaTokenDao`。官方暂无 `sa-token-dao-mongodb` 开箱 crate，本篇演示自行扩展。
 
-[示例代码：sa-token-mongodb-demo](https://gitee.com/lilihao/sa-token-mongodb-demo)
+| Java | Rust |
+|---|---|
+| `spring-boot-starter-data-mongodb` | `mongodb` crate（Cargo） |
+| `MongoTemplate` | `mongodb::Collection` / `Database` |
+| `implements SaTokenDao` | `impl SaTokenDao for SaTokenMongoDao` |
+| `@Document` + TTL 索引 | BSON 文档 + TTL index |
+| Jackson | `serde` / `serde_json` |
+
+此章介绍如何通过扩展 `SaTokenDao` 接口来实现 MongoDB 的集成。
+
+Java 社区示例可参考：[sa-token-mongodb-demo](https://gitee.com/lilihao/sa-token-mongodb-demo)（Spring Boot）。Rust 侧思路相同：实现持久化 trait，并在启动时 `SaManager::set_sa_token_dao(...)`。
 
 先决条件：
-1. Spring Boot 3
-2. Spring Data Mongodb
+1. Tokio 异步运行时（若 DAO 内部用异步 client，可用 `block_on` 包装同步 `SaTokenDao`，或优先使用 `AsyncSaTokenDao` + `AsyncStpUtil`）
+2. `mongodb` crate
 
 以下是依赖的引入：
 
@@ -15,22 +25,24 @@
 
 
 <!---------------------------- tabs:start ------------------------------>
-<!-------- tab:Maven 方式 -------->
-``` xml 
-<!-- 引入 spring data mongodb -->
-<dependency>
-	<groupId>org.springframework.boot</groupId>
-	<artifactId>spring-boot-starter-data-mongodb</artifactId>
-</dependency>
+<!-------- tab:Cargo 方式 -------->
+``` toml
+[dependencies]
+sa-token-core = "0.1"
+mongodb = { version = "3", features = ["sync"] }  # 或异步 features
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
 ```
-<!-------- tab:Gradle 方式 -------->
-``` gradle
-// 引入 spring data mongodb
-implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+<!-------- tab:workspace 方式 -------->
+``` toml
+# workspace Cargo.toml
+mongodb.workspace = true
+serde.workspace = true
 ```
 <!---------------------------- tabs:end ------------------------------>
 
-优点：少量改造即可完成集成 MongodDB
+优点：少量改造即可完成集成 MongoDB
 
 
 
@@ -38,300 +50,290 @@ implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 ### 集成代码：
 
 
-**1. 创建一个类来包装`Sa—Token`的数据**
-```java
-@Document("saTokenMongo") // 你也可以自定义集合名称
-public class SaTokenMongoData {
+**1. 创建一个结构体来包装 Sa-Token-Rs 的数据**
+``` rust
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use sa_token_core::session::sa_session::SaSession;
 
-    @Id
-    private String id;
+/// MongoDB 中保存的 Sa-Token 数据文档
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SaTokenMongoData {
+    /// 文档 id（可与 key 相同）
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
 
-    // token
-    @Indexed(unique = true)
-    private String key;
+    /// token / 业务 key（唯一）
+    pub key: String,
 
-    // sa-token 的 session
-    private SaSession session;
+    /// sa-token 的 session（可选）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session: Option<SaSession>,
 
-    // sa-token 的 token string
-    private String string;
+    /// sa-token 的 token string（可选）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub string: Option<String>,
 
-    //使用 @SuppressWarnings("removal") 的目的是，防止IDEA报错，因为 expireAfterSeconds是不在支持的属性。
-    @SuppressWarnings("removal")
-    // 给 expireAt 添加 `@Indexed(expireAfterSeconds = 0)` 注解，当过期时MongoDB会自动帮我删除过期的数据
-    @Indexed(expireAfterSeconds = 0)
-    private LocalDateTime expireAt; // 你也可以使用 Date 类型，对应的在`SaTokenMongoDao`中，需要将LocalDateTime替换成Date
-
-    // 忽略 getter setter
+    /// 过期时间；为 None 表示永不过期。配合 MongoDB TTL 索引自动删除
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expire_at: Option<DateTime<Utc>>,
 }
 ```
+
+在 MongoDB 上为 `expire_at` 创建 TTL 索引（`expireAfterSeconds = 0`），过期文档由服务端自动清理。
 
 **2.实现 SaTokenDao**
 
-这个 SaTokenMongoDao 是仿照官方的 redis 集成实现的
-```java
-package com.xx.xx.security;
+这个 `SaTokenMongoDao` 是仿照官方的 redis 集成实现的（同步示意；生产可改为 `AsyncSaTokenDao`）：
 
-import cn.dev33.satoken.dao.SaTokenDao;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
-import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
+``` rust
+use std::sync::Arc;
+use chrono::{Duration, Utc};
+use mongodb::bson::doc;
+use mongodb::sync::{Client, Collection};
+use sa_token_core::dao::sa_token_dao::{self, SaTokenDao, NEVER_EXPIRE, NOT_VALUE_EXPIRE};
+use sa_token_core::exception::{SaResult, SaTokenException};
+use sa_token_core::session::sa_session::SaSession;
+use sa_token_core::sa_manager::SaManager;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.regex.Pattern;
+use super::SaTokenMongoData;
 
-@Component
-public class SaTokenMongoDao implements SaTokenDao {
+/// MongoDB 持久化实现（对应 Java SaTokenMongoDao）
+pub struct SaTokenMongoDao {
+    collection: Collection<SaTokenMongoData>,
+}
 
-    private final MongoTemplate mongoTemplate;
-
-    public SaTokenMongoDao(MongoTemplate mongoTemplate) {
-        this.mongoTemplate = mongoTemplate;
+impl SaTokenMongoDao {
+    /// 连接并构造 DAO
+    pub fn connect(uri: &str, db: &str, coll: &str) -> SaResult<Self> {
+        let client = Client::with_uri_str(uri).map_err(|e| SaTokenException::other(e.to_string()))?;
+        let collection = client.database(db).collection(coll);
+        // 建议在此确保 key 唯一索引 + expire_at TTL 索引
+        Ok(Self { collection })
     }
 
-
-    private Query keyQuery(String key) {
-        return Query.query(Criteria.where("key").is(key));
-    }
-
-    /**
-     * 获取 value，如无返空
-     *
-     * @param key 键名称
-     * @return value
-     */
-    @Override
-    public String get(String key) {
-
-        return Optional.ofNullable(mongoTemplate.findOne(keyQuery(key), SaTokenMongoData.class)).map(SaTokenMongoData::getString).orElse(null);
-    }
-
-
-    LocalDateTime getExpireAtFromTimeout(long timeout) {
-        // 当接受到的值是`SaTokenDao.NEVER_EXPIRE`时，说明永不过期，对应的我们需要把 expireAt 设置为null mongodb就不会删除这个记录
-        return timeout == SaTokenDao.NEVER_EXPIRE ? null : LocalDateTime.now().plusSeconds(timeout);
-    }
-
-    /**
-     * 写入 value，并设定存活时间（单位: 秒）
-     *
-     * @param key     键名称
-     * @param value   值
-     * @param timeout 数据有效期（值大于0时限时存储，值=-1时永久存储，值=0或小于等于-2时不存储）
-     */
-    @Override
-    public void set(String key, String value, long timeout) {
-        if (timeout == 0 || timeout <= SaTokenDao.NOT_VALUE_EXPIRE) {
-            return;
+    fn expire_at_from_timeout(timeout: i64) -> Option<chrono::DateTime<Utc>> {
+        // NEVER_EXPIRE => None，MongoDB 不会按 TTL 删除
+        if timeout == NEVER_EXPIRE {
+            None
+        } else {
+            Some(Utc::now() + Duration::seconds(timeout))
         }
+    }
+}
 
-        // 判断是否为永不过期
-        mongoTemplate.upsert(
-                keyQuery(key),
-                Update.update("string", value).set("expireAt", getExpireAtFromTimeout(timeout)),
-                SaTokenMongoData.class
-        );
+impl SaTokenDao for SaTokenMongoDao {
+    fn get(&self, key: &str) -> SaResult<Option<String>> {
+        let filter = doc! { "key": key };
+        let found = self
+            .collection
+            .find_one(filter)
+            .map_err(|e| SaTokenException::other(e.to_string()))?;
+        Ok(found.and_then(|d| d.string))
     }
 
-    /**
-     * 更新 value （过期时间不变）
-     *
-     * @param key   键名称
-     * @param value 值
-     */
-    @Override
-    public void update(String key, String value) {
-        long expire = getTimeout(key);
-        // -2 = 无此键
-        if (expire == SaTokenDao.NOT_VALUE_EXPIRE) {
-            return;
+    fn set(&self, key: &str, value: &str, timeout: i64) -> SaResult<()> {
+        if timeout == 0 || timeout <= NOT_VALUE_EXPIRE {
+            return Ok(());
         }
-        this.set(key, value, expire);
-    }
-
-    /**
-     * 删除 value
-     *
-     * @param key 键名称
-     */
-    @Override
-    public void delete(String key) {
-        mongoTemplate.remove(keyQuery(key), SaTokenMongoData.class);
-    }
-
-    /**
-     * 获取 value 的剩余存活时间（单位: 秒）
-     *
-     * @param key 指定 key
-     * @return 这个 key 的剩余存活时间
-     */
-    @Override
-    public long getTimeout(String key) {
-
-        LocalDateTime localDateTime = Optional.ofNullable(mongoTemplate.findOne(keyQuery(key), SaTokenMongoData.class)).map(SaTokenMongoData::getExpireAt).orElse(LocalDateTime.MIN);
-
-        long seconds = Duration.between(LocalDateTime.now(), localDateTime).getSeconds();
-        if (seconds < 0) {
-            return 0;
-        }
-        return seconds;
-    }
-
-    /**
-     * 修改 value 的剩余存活时间（单位: 秒）
-     *
-     * @param key     指定 key
-     * @param timeout 过期时间（单位: 秒）
-     */
-    @Override
-    public void updateTimeout(String key, long timeout) {
-        // 判断是否想要设置为永久
-        if (timeout == SaTokenDao.NEVER_EXPIRE) {
-            long expire = getTimeout(key);
-            //noinspection StatementWithEmptyBody
-            if (expire == SaTokenDao.NEVER_EXPIRE) {
-                // 如果其已经被设置为永久，则不作任何处理
-            } else {
-                // 如果尚未被设置为永久，那么再次set一次
-                this.set(key, this.get(key), timeout);
+        let filter = doc! { "key": key };
+        let update = doc! {
+            "$set": {
+                "string": value,
+                "expire_at": Self::expire_at_from_timeout(timeout)
+                    .map(|t| mongodb::bson::DateTime::from_millis(t.timestamp_millis())),
             }
-            return;
+        };
+        self.collection
+            .update_one(filter, update)
+            .upsert(true)
+            .run()
+            .map_err(|e| SaTokenException::other(e.to_string()))?;
+        Ok(())
+    }
+
+    fn update(&self, key: &str, value: &str) -> SaResult<()> {
+        let expire = self.get_timeout(key)?;
+        if expire == NOT_VALUE_EXPIRE {
+            return Ok(());
         }
-
-        mongoTemplate.upsert(
-                keyQuery(key),
-                Update.update("expireAt", getExpireAtFromTimeout(timeout)),
-                SaTokenMongoData.class
-        );
+        self.set(key, value, expire)
     }
 
-    /**
-     * 获取 Object，如无返空
-     *
-     * @param key 键名称
-     * @return object
-     */
-    @Override
-    public Object getObject(String key) {
-        return Optional.ofNullable(mongoTemplate.findOne(keyQuery(key), SaTokenMongoData.class)).map(SaTokenMongoData::getSession).orElse(null);
+    fn delete(&self, key: &str) -> SaResult<()> {
+        self.collection
+            .delete_one(doc! { "key": key })
+            .map_err(|e| SaTokenException::other(e.to_string()))?;
+        Ok(())
     }
 
-    /**
-     * 写入 Object，并设定存活时间 （单位: 秒）
-     *
-     * @param key     键名称
-     * @param object  值
-     * @param timeout 存活时间（值大于0时限时存储，值=-1时永久存储，值=0或小于等于-2时不存储）
-     */
-    @Override
-    public void setObject(String key, Object object, long timeout) {
-        if (timeout == 0 || timeout <= SaTokenDao.NOT_VALUE_EXPIRE) {
-            return;
+    fn get_timeout(&self, key: &str) -> SaResult<i64> {
+        let found = self
+            .collection
+            .find_one(doc! { "key": key })
+            .map_err(|e| SaTokenException::other(e.to_string()))?;
+        let Some(data) = found else {
+            return Ok(NOT_VALUE_EXPIRE);
+        };
+        let Some(expire_at) = data.expire_at else {
+            return Ok(NEVER_EXPIRE);
+        };
+        let seconds = (expire_at - Utc::now()).num_seconds();
+        Ok(if seconds < 0 { 0 } else { seconds })
+    }
+
+    fn update_timeout(&self, key: &str, timeout: i64) -> SaResult<()> {
+        if timeout == NEVER_EXPIRE {
+            let expire = self.get_timeout(key)?;
+            if expire != NEVER_EXPIRE {
+                if let Some(v) = self.get(key)? {
+                    self.set(key, &v, timeout)?;
+                }
+            }
+            return Ok(());
         }
-        // 判断是否为永不过期
-        mongoTemplate.upsert(
-                keyQuery(key),
-                Update.update("session", object).set("expireAt", getExpireAtFromTimeout(timeout)),
-                SaTokenMongoData.class
-        );
+        let filter = doc! { "key": key };
+        let update = doc! {
+            "$set": {
+                "expire_at": Self::expire_at_from_timeout(timeout)
+                    .map(|t| mongodb::bson::DateTime::from_millis(t.timestamp_millis())),
+            }
+        };
+        self.collection
+            .update_one(filter, update)
+            .upsert(true)
+            .run()
+            .map_err(|e| SaTokenException::other(e.to_string()))?;
+        Ok(())
     }
 
-    /**
-     * 更新 Object （过期时间不变）
-     *
-     * @param key    键名称
-     * @param object 值
-     */
-    @Override
-    public void updateObject(String key, Object object) {
-        long expire = getObjectTimeout(key);
-        // -2 = 无此键
-        if (expire == SaTokenDao.NOT_VALUE_EXPIRE) {
-            return;
+    fn get_object(&self, key: &str) -> SaResult<Option<serde_json::Value>> {
+        let found = self
+            .collection
+            .find_one(doc! { "key": key })
+            .map_err(|e| SaTokenException::other(e.to_string()))?;
+        Ok(found.and_then(|d| d.session.map(|s| serde_json::to_value(s).ok()).flatten()))
+    }
+
+    fn set_object(&self, key: &str, value: &serde_json::Value, timeout: i64) -> SaResult<()> {
+        if timeout == 0 || timeout <= NOT_VALUE_EXPIRE {
+            return Ok(());
         }
-        this.setObject(key, object, expire);
+        let session: SaSession =
+            serde_json::from_value(value.clone()).map_err(|e| SaTokenException::other(e.to_string()))?;
+        let filter = doc! { "key": key };
+        let update = doc! {
+            "$set": {
+                "session": mongodb::bson::to_bson(&session).map_err(|e| SaTokenException::other(e.to_string()))?,
+                "expire_at": Self::expire_at_from_timeout(timeout)
+                    .map(|t| mongodb::bson::DateTime::from_millis(t.timestamp_millis())),
+            }
+        };
+        self.collection
+            .update_one(filter, update)
+            .upsert(true)
+            .run()
+            .map_err(|e| SaTokenException::other(e.to_string()))?;
+        Ok(())
     }
 
-    /**
-     * 删除 Object
-     *
-     * @param key 键名称
-     */
-    @Override
-    public void deleteObject(String key) {
-        delete(key);
-    }
-
-    /**
-     * 获取 Object 的剩余存活时间 （单位: 秒）
-     *
-     * @param key 指定 key
-     * @return 这个 key 的剩余存活时间
-     */
-    @Override
-    public long getObjectTimeout(String key) {
-        return getTimeout(key);
-    }
-
-    /**
-     * 修改 Object 的剩余存活时间（单位: 秒）
-     *
-     * @param key     指定 key
-     * @param timeout 剩余存活时间
-     */
-    @Override
-    public void updateObjectTimeout(String key, long timeout) {
-        // 判断是否想要设置为永久
-        updateTimeout(key, timeout);
-    }
-
-    /**
-     * 搜索数据
-     *
-     * @param prefix   前缀
-     * @param keyword  关键字
-     * @param start    开始处索引
-     * @param size     获取数量  (-1代表从 start 处一直取到末尾)
-     * @param sortType 排序类型（true=正序，false=反序）
-     * @return 查询到的数据集合
-     */
-    @Override
-    public List<String> searchData(String prefix, String keyword, int start, int size, boolean sortType) {
-
-        List<Criteria> criteriaList = new ArrayList<>();
-
-        if (StringUtils.hasText(prefix)) {
-            criteriaList.add(Criteria.where("key").regex(Pattern.compile("^" + Pattern.quote(prefix))));
+    fn update_object(&self, key: &str, value: &serde_json::Value) -> SaResult<()> {
+        let expire = self.get_object_timeout(key)?;
+        if expire == NOT_VALUE_EXPIRE {
+            return Ok(());
         }
-        if (StringUtils.hasText(keyword)) {
-            Pattern keywordPattern = Pattern.compile(Pattern.quote(keyword), Pattern.CASE_INSENSITIVE);
-            criteriaList.add(Criteria.where("key").regex(keywordPattern));
-        }
-
-
-        Criteria criteria = new Criteria();
-
-        if (!criteriaList.isEmpty()) {
-            criteria.andOperator(criteriaList);
-        }
-
-        long skip = (long) Math.max(start, 0) * Math.max(size, 1);
-
-        Query query = Query.query(criteria).skip(skip).limit(size);
-
-        query.fields().include("key");
-
-        return mongoTemplate.find(query, SaTokenMongoData.class).stream().map(SaTokenMongoData::getKey).toList();
+        self.set_object(key, value, expire)
     }
+
+    fn delete_object(&self, key: &str) -> SaResult<()> {
+        self.delete(key)
+    }
+
+    fn get_object_timeout(&self, key: &str) -> SaResult<i64> {
+        self.get_timeout(key)
+    }
+
+    fn update_object_timeout(&self, key: &str, timeout: i64) -> SaResult<()> {
+        self.update_timeout(key, timeout)
+    }
+
+    fn get_session(&self, session_id: &str) -> SaResult<Option<SaSession>> {
+        let found = self
+            .collection
+            .find_one(doc! { "key": session_id })
+            .map_err(|e| SaTokenException::other(e.to_string()))?;
+        Ok(found.and_then(|d| d.session))
+    }
+
+    fn set_session(&self, session: &SaSession, timeout: i64) -> SaResult<()> {
+        let value = serde_json::to_value(session).map_err(|e| SaTokenException::other(e.to_string()))?;
+        self.set_object(session.id(), &value, timeout)
+    }
+
+    fn update_session(&self, session: &SaSession) -> SaResult<()> {
+        let value = serde_json::to_value(session).map_err(|e| SaTokenException::other(e.to_string()))?;
+        self.update_object(session.id(), &value)
+    }
+
+    fn delete_session(&self, session_id: &str) -> SaResult<()> {
+        self.delete(session_id)
+    }
+
+    fn get_session_timeout(&self, session_id: &str) -> SaResult<i64> {
+        self.get_timeout(session_id)
+    }
+
+    fn update_session_timeout(&self, session_id: &str, timeout: i64) -> SaResult<()> {
+        self.update_timeout(session_id, timeout)
+    }
+
+    fn search_data(
+        &self,
+        prefix: &str,
+        keyword: &str,
+        start: i64,
+        size: i64,
+        _sort_type: bool,
+    ) -> SaResult<Vec<String>> {
+        // 简化：按 key 正则匹配；生产环境请补排序与精确分页
+        let mut and_conds = vec![];
+        if !prefix.is_empty() {
+            and_conds.push(doc! { "key": { "$regex": format!("^{}", regex::escape(prefix)) } });
+        }
+        if !keyword.is_empty() {
+            and_conds.push(doc! { "key": { "$regex": regex::escape(keyword), "$options": "i" } });
+        }
+        let filter = if and_conds.is_empty() {
+            doc! {}
+        } else {
+            doc! { "$and": and_conds }
+        };
+        let skip = start.max(0) as u64;
+        let limit = if size < 0 { 0 } else { size as i64 };
+        let mut cursor = self
+            .collection
+            .find(filter)
+            .skip(skip)
+            .limit(limit)
+            .run()
+            .map_err(|e| SaTokenException::other(e.to_string()))?;
+        let mut keys = Vec::new();
+        while let Some(doc) = cursor.next() {
+            let data = doc.map_err(|e| SaTokenException::other(e.to_string()))?;
+            keys.push(data.key);
+        }
+        Ok(keys)
+    }
+}
+
+/// 启动时注册 DAO
+pub fn init_mongo_dao() -> SaResult<()> {
+    let dao = SaTokenMongoDao::connect("mongodb://127.0.0.1:27017", "satoken", "saTokenMongo")?;
+    SaManager::set_sa_token_dao(Arc::new(dao));
+    Ok(())
 }
 ```
 
-
+> [!TIP| label:实现提示]
+> 上文为教学示意，`mongodb` sync API 方法名可能随版本微调，请以当前 crate 文档为准。若使用纯异步 client，请实现 `AsyncSaTokenDao` 并配合 `AsyncStpUtil`，勿对同步 `StpUtil` 假写 `.await`。
 

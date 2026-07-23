@@ -199,4 +199,4 @@
 
 - [MIGRATION_STATUS.md](./MIGRATION_STATUS.md) - 迁移进度
 - [object-method-matrix.md](./object-method-matrix.md) - 方法矩阵
-- **easyexcel-rs 审计**：`/Users/wandl/workspaces/workspace-github/easyexcel-rs/docs/migration/CODEGRAPH_METHOD_MAP.md`
+- **easyexcel-rs 审计**：<https://github.com/easy-4-rust/easyexcel-rs/blob/main/docs/migration/CODEGRAPH_METHOD_MAP.md>

@@ -1,18 +1,29 @@
 # 框架配置
 
-你可以**零配置启动框架**，但同时你也可以通过一定的参数配置，定制性使用框架，`Sa-Token`支持多种方式配置框架信息
+> 本文保留 Java 原文全部配置表与章节结构。Rust 侧请优先使用 **`SaTokenConfig` + `SaManager::set_config`**；YAML/properties 仅作语义对照。
+
+| Java | Rust |
+|---|---|
+| `application.yml` `sa-token.*` | `SaTokenConfig { token_name, timeout, ... }` |
+| `@Bean SaTokenConfig` | `SaManager::set_config(Arc::new(...))` |
+| `StpUtil.login` / `getTokenSession` | `StpUtil::login` / `get_token_session` |
+| 字段 camelCase | 字段 snake_case（见 `sa_token_config.rs`） |
+
+你可以**零配置启动框架**，但同时你也可以通过一定的参数配置，定制性使用框架，`Sa-Token-Rs`支持多种方式配置框架信息
 
 --- 
 
 ### 1、配置方式
 
-##### 方式1、在 application.yml 配置
+##### 方式1、YAML / properties 语义对照（Java 风格）
+
+> Rust 项目无强制 `application.yml`；下列配置用于理解字段含义，实际请用方式 2 的 `SaTokenConfig`。
 
 <!---------------------------- tabs:start ---------------------------->
 
 <!------------- tab:yaml 风格  ------------->
 ``` yaml
-############## Sa-Token 配置 (文档: https://sa-token.cc) ##############
+############## Sa-Token-Rs 配置语义对照 ##############
 sa-token: 
 	# token 名称（同时也是 cookie 名称）
 	token-name: satoken
@@ -32,7 +43,7 @@ sa-token:
 
 <!------------- tab:properties 风格  ------------->
 ``` properties
-############## Sa-Token 配置 (文档: https://sa-token.cc) ##############
+############## Sa-Token-Rs 配置语义对照 ##############
 
 # token 名称（同时也是 cookie 名称）
 sa-token.token-name=satoken
@@ -54,65 +65,58 @@ sa-token.is-log=true
 
 
 
-##### 方式2、通过代码配置
+##### 方式2、通过代码配置（Rust 推荐）
 
 <!------------------------------ tabs:start ------------------------------>
-<!------------- tab:模式 1 ------------->
-``` java 
-/**
- * Sa-Token 配置类
- */
-@Configuration
-public class SaTokenConfigure {
-	// Sa-Token 参数配置，参考文档：https://sa-token.cc
-	// 此配置会覆盖 application.yml 中的配置
-    @Bean
-    @Primary
-    public SaTokenConfig getSaTokenConfigPrimary() {
-		SaTokenConfig config = new SaTokenConfig();
-		config.setTokenName("satoken");             // token 名称（同时也是 cookie 名称）
-		config.setTimeout(30 * 24 * 60 * 60);       // token 有效期（单位：秒），默认30天，-1代表永不过期 
-		config.setActiveTimeout(-1);              // token 最低活跃频率（单位：秒），如果 token 超过此时间没有访问系统就会被冻结，默认-1 代表不限制，永不冻结
-		config.setIsConcurrent(true);               // 是否允许同一账号多地同时登录（为 true 时允许一起登录，为 false 时新登录挤掉旧登录）
-		config.setIsShare(false);                    // 在多人登录同一账号时，是否共用一个 token （为 true 时所有登录共用一个 token，为 false 时每次登录新建一个 token）
-		config.setTokenStyle("uuid");               // token 风格
-		config.setIsLog(false);                     // 是否输出操作日志 
-		return config;
-	}
+<!------------- tab:Rust SaTokenConfig ------------->
+``` rust
+use std::sync::Arc;
+use sa_token::prelude::*;
+
+/// Sa-Token-Rs 参数配置（对应 Java @Bean SaTokenConfig）
+fn init_config() {
+    SaManager::set_config(Arc::new(SaTokenConfig {
+        token_name: "satoken".into(),                 // token 名称（同时也是 cookie 名称）
+        timeout: 30 * 24 * 60 * 60,                   // token 有效期（单位：秒），默认30天，-1代表永不过期
+        active_timeout: -1,                           // token 最低活跃频率（单位：秒）
+        is_concurrent: true,                          // 是否允许同一账号多地同时登录
+        is_share: false,                              // 多人登录同一账号时是否共用一个 token
+        token_style: SaTokenStyle::Uuid,              // token 风格
+        is_log: false,                                // 是否输出操作日志
+        ..Default::default()
+    }));
 }
 ```
-<!------------- tab:模式 2 ------------->
+<!------------- tab:Java 对照（Bean） ------------->
 ``` java
-/**
- * Sa-Token 配置类
- */
-@Configuration
-public class SaTokenConfigure {
-	// Sa-Token 参数配置，参考文档：https://sa-token.cc
-	// 此配置会与 application.yml 中的配置合并 （代码配置优先）
-	@Autowired
-	public void configSaToken(SaTokenConfig config) {
-		config.setTokenName("satoken");             // token 名称（同时也是 cookie 名称）
-		config.setTimeout(30 * 24 * 60 * 60);       // token 有效期（单位：秒），默认30天，-1代表永不过期 
-		config.setActiveTimeout(-1);              // token 最低活跃频率（单位：秒），如果 token 超过此时间没有访问系统就会被冻结，默认-1 代表不限制，永不冻结
-		config.setIsConcurrent(true);               // 是否允许同一账号多地同时登录（为 true 时允许一起登录，为 false 时新登录挤掉旧登录）
-		config.setIsShare(false);                    // 在多人登录同一账号时，是否共用一个 token （为 true 时所有登录共用一个 token，为 false 时每次登录新建一个 token）
-		config.setTokenStyle("uuid");               // token 风格
-		config.setIsLog(false);                     // 是否输出操作日志 
-	}
+// 以下为 Java 原版写法，仅作对照
+@Bean
+@Primary
+public SaTokenConfig getSaTokenConfigPrimary() {
+    SaTokenConfig config = new SaTokenConfig();
+    config.setTokenName("satoken");
+    config.setTimeout(30 * 24 * 60 * 60);
+    config.setActiveTimeout(-1);
+    config.setIsConcurrent(true);
+    config.setIsShare(false);
+    config.setTokenStyle("uuid");
+    config.setIsLog(false);
+    return config;
 }
 ```
 <!---------------------------- tabs:end ------------------------------>
 
-两者的区别在于：
-- 模式 1 会覆盖 application.yml 中的配置。
-- 模式 2 会与 application.yml 中的配置合并（代码配置优先）。
+说明：
+- Rust 侧通常在启动时一次性 `set_config`，覆盖默认值（类似 Java 模式 1）。
+- 若需「与文件配置合并」，可自行先解析配置文件再填充 `SaTokenConfig` 字段（类似 Java 模式 2）。
 
 
 --- 
 ### 2、核心包所有可配置项
 
 #### 2.1、核心模块配置
+
+> 下表参数名沿用 Java 文档 camelCase，便于对照；Rust 字段为 snake_case，例如 `tokenName` → `token_name`，`isConcurrent` → `is_concurrent`。以 `sa-token-core` 的 `SaTokenConfig` 为准。
 
 你不必立刻掌握整个表格，只需要在用到某个功能时再详细查阅它即可
 
@@ -131,11 +135,11 @@ public class SaTokenConfigure {
 | maxTryTimes			| int		| 12		| 在每次创建 Token 时的最高循环次数，用于保证 Token 唯一性（-1=不循环重试，直接使用）			|
 | isReadBody			| Boolean	| true		| 是否尝试从 请求体 里读取 Token														|
 | isReadHeader			| Boolean	| true		| 是否尝试从 header 里读取 Token														|
-| isReadCookie			| Boolean	| true		| 是否尝试从 cookie 里读取 Token，此值为 false 后，`StpUtil.login(id)` 登录时也不会再往前端注入Cookie				|
+| isReadCookie			| Boolean	| true		| 是否尝试从 cookie 里读取 Token，此值为 false 后，`StpUtil::login(id)` 登录时也不会再往前端注入Cookie				|
 | isLastingCookie		| Boolean	| true		| 是否为持久Cookie（临时Cookie在浏览器关闭时会自动删除，持久Cookie在重新打开后依然存在）						|
 | isWriteHeader			| Boolean	| false		| 是否在登录后将 Token 写入到响应头							|
-| logoutRange		| SaLogoutRange	| TOKEN		| 注销范围 (TOKEN=只注销当前 token 的会话，ACCOUNT=注销当前 token 指向的 loginId 其所有客户端会话) (此参数只在调用 StpUtil.logout() 时有效)						|
-| isLogoutKeepFreezeOps		| Boolean	| false	| 如果 token 已被冻结，是否保留其操作权 (是否允许此 token 调用注销API)	(此参数只在调用 StpUtil.[logout/kickout/replaced]ByTokenValue("token") 时有效)			|
+| logoutRange		| SaLogoutRange	| TOKEN		| 注销范围 (TOKEN=只注销当前 token 的会话，ACCOUNT=注销当前 token 指向的 loginId 其所有客户端会话) (此参数只在调用 StpUtil::logout() 时有效)						|
+| isLogoutKeepFreezeOps		| Boolean	| false	| 如果 token 已被冻结，是否保留其操作权 (是否允许此 token 调用注销API)	(此参数只在调用 StpUtil::{logout,kickout,replaced}_by_token_value("token") 时有效)			|
 | isLogoutKeepTokenSession	| Boolean	| false	| 在注销 token 后，是否保留其对应的 Token-Session					|
 | rightNowCreateTokenSession| Boolean	| false	| 在登录时，是否立即创建对应的 Token-Session （true=在登录时立即创建，false=在第一次调用 getTokenSession() 时创建）	|
 | tokenStyle			| String	| uuid		| token风格， [参考：自定义Token风格](/up/token-style)										|
@@ -174,7 +178,7 @@ Cookie 配置示例:
 <!---------------------------- tabs:start ---------------------------->
 <!------------- tab:yaml 风格  ------------->
 ``` yaml
-# Sa-Token 配置
+# Sa-Token-Rs 配置
 sa-token: 
     # Cookie 相关配置 
     cookie: 
@@ -226,7 +230,7 @@ sa-token.cookie.extraAttrs.Partitioned=""
 <!---------------------------- tabs:start ---------------------------->
 <!------------- tab:yaml 风格  ------------->
 ``` yaml
-# Sa-Token 配置
+# Sa-Token-Rs 配置
 sa-token: 
     # 参数签名配置 
     sign: 
@@ -255,7 +259,7 @@ sa-token.sign.secret-key=kQwIOrYvnXmSDkwEiFngrKidMcdrgKor
 <!---------------------------- tabs:start ---------------------------->
 <!------------- tab:yaml 风格  ------------->
 ``` yaml
-# Sa-Token 配置
+# Sa-Token-Rs 配置
 sa-token:
     # API Key 相关配置
     api-key:
@@ -305,7 +309,7 @@ sa-token.pi-key.is-record-index=true
 <!---------------------------- tabs:start ---------------------------->
 <!------------- tab:yaml 风格  ------------->
 ``` yml
-# Sa-Token 配置
+# Sa-Token-Rs 配置
 sa-token: 
     # SSO-Server 配置
     sso-server:
@@ -350,7 +354,7 @@ sa-token.sso-server.home-route=/home
 <!---------------------------- tabs:start ---------------------------->
 <!------------- tab:yaml 风格  ------------->
 ``` yaml
-# Sa-Token 配置
+# Sa-Token-Rs 配置
 sa-token: 
     # SSO-相关配置
     sso-client: 
@@ -387,7 +391,7 @@ sa-token.sso-client.is-slo=true
 <!---------------------------- tabs:start ---------------------------->
 <!------------- tab:yaml 风格  ------------->
 ``` yml
-# Sa-Token 配置
+# Sa-Token-Rs 配置
 sa-token: 
     # SSO-Server 配置
     sso-server:
@@ -455,7 +459,7 @@ sa-token.sso-server.clients.sso-client2.secret-key=SSO-C2-kQwIOrYvnXmSDkwEiFngrK
 <!---------------------------- tabs:start ---------------------------->
 <!------------- tab:yaml 风格  ------------->
 ``` yaml
-# Sa-Token 配置
+# Sa-Token-Rs 配置
 sa-token: 
     token-name: sa-token-oauth2-server
     # OAuth2.0 配置 
@@ -467,7 +471,7 @@ sa-token:
 ```
 <!------------- tab:properties 风格  ------------->
 ``` properties
-# Sa-Token 配置 
+# Sa-Token-Rs 配置 
 sa-token.token-name=sa-token-oauth2-server
 # OAuth2.0 配置 
 sa-token.oauth2-server.enable-authorization-code=true
@@ -487,7 +491,7 @@ sa-token.oauth2-server.enable-client-credentials=true
 <!---------------------------- tabs:start ---------------------------->
 <!------------- tab:yaml 风格  ------------->
 ``` yaml
-# Sa-Token 配置
+# Sa-Token-Rs 配置
 sa-token: 
     oauth2-server: 
 		oidc: 
@@ -533,11 +537,11 @@ sa-token.oauth2-server.oidc.idTokenTimeout=600
 
 配置含义：同一账号最大登录数量。
 
-在配置 `isConcurrent=true`, `isShare=false` 时，Sa-Token 将允许同一账号并发登录，且每次登录都会产生一个新Token，
+在配置 `isConcurrent=true`, `isShare=false` 时，Sa-Token-Rs 将允许同一账号并发登录，且每次登录都会产生一个新Token，
 这些 Token 都会以 `SaTerminalInfo` 的形式记录在其 `Account-Session` 之上，这就造成一个问题：
 
 随着同一账号登录的次数越来越多，SaTerminalInfo 的列表也会越来越大，极端情况下，列表长度可能达到成百上千以上，严重拖慢数据处理速度，
-为此 Sa-Token 对这个 SaTerminalInfo 列表的大小设定一个上限值，也就是 `maxLoginCount`，默认值=12。
+为此 Sa-Token-Rs 对这个 SaTerminalInfo 列表的大小设定一个上限值，也就是 `maxLoginCount`，默认值=12。
 
 假设一个账号的登录数量超过 `maxLoginCount` 后，将会主动注销第一个登录的会话（先进先出），以此保证队列中的有效会话数量始终 `<= maxLoginCount` 值。
 
@@ -545,17 +549,17 @@ sa-token.oauth2-server.oidc.idTokenTimeout=600
 #### 配置项详解：tokenSessionCheckLogin
 配置含义：获取 `Token-Session` 时是否必须登录 （如果配置为true，会在每次获取 `Token-Session` 时校验是否登录）。
 
-在调用 `StpUtil.login(id)` 登录后，
+在调用 `StpUtil::login(id)` 登录后，
 
-- 调用 `StpUtil.getSession()` 可以获取这个会话的 `Account-Session` 对象。
-- 调用 `StpUtil.getTokenSession()` 可以获取这个会话 `Token-Session` 对象。
+- 调用 `StpUtil::get_session()` 可以获取这个会话的 `Account-Session` 对象。
+- 调用 `StpUtil::get_token_session()` 可以获取这个会话 `Token-Session` 对象。
 
 关于两种 Session 有何区别，可以参考这篇：[Session模型详解](/fun/session-model)，此处暂不赘述。
 
 从设计上讲，无论会话是否已经登录，只要前端提供了Token，我们就可以找到这个 Token 的专属 `Token-Session` 对象，**这非常灵活但不安全**，
 因为前端提交的 Token 可能是任意伪造的。
 
-为了解决这个问题，`StpUtil.getTokenSession()` 方法在获取 `Token-Session` 时，会率先检测一下这个 Token 是否是一个有效Token：
+为了解决这个问题，`StpUtil::get_token_session()` 方法在获取 `Token-Session` 时，会率先检测一下这个 Token 是否是一个有效Token：
 - 如果是有效Token，正常返回 `Token-Session` 对象
 - 如果是无效Token，则抛出异常。
 
@@ -584,9 +588,9 @@ sa-token.oauth2-server.oidc.idTokenTimeout=600
 
 ---
 
-<a class="case-btn" href="https://gitee.com/dromara/sa-token/blob/master/sa-token-demo/sa-token-demo-case/src/main/resources/application.yml"
+<a class="case-btn" href="https://github.com/easy-4-rust/sa-token-rs/tree/main/crates/sa-token-demo/sa-token-demo-axum"
 	target="_blank">
-	本章代码示例：Sa-Token 框架配置 —— [ application.yml ]
+	本章代码示例：Sa-Token-Rs 框架配置 —— [ sa-token-demo-axum ]
 </a>
-<a class="dt-btn" href="https://www.wenjuan.ltd/s/nUfe2iU/" target="_blank">本章小练习：Sa-Token 基础 - 框架配置，章节测试</a>
+<a class="dt-btn" href="https://www.wenjuan.ltd/s/nUfe2iU/" target="_blank">本章小练习：Sa-Token-Rs 基础 - 框架配置，章节测试</a>
 

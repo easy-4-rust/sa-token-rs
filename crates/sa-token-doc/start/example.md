@@ -1,170 +1,209 @@
-# Axum 集成 Sa-Token-Rs 示例
+# axum 集成 Sa-Token-Rs 示例
 
-> ⚠️ **本文档适配状态**：✅ 已完成 Rust 移植版
->
-> 本文档基于 Java 版的 `start/example.md` 移植，Java 源码保留在 [`Sa-Token/sa-token-doc/start/example.md`](https://gitee.com/dromara/sa-token/blob/dev/sa-token-doc/start/example.md)。
->
-> | Java (sa-token) | Rust (sa-token-rs) |
-> | --- | --- |
-> | SpringBoot 3.x / 4.x | **Axum 0.7+** |
-> | `cn.dev33:sa-token-spring-boot3-starter` | `sa-token-rs = { version = "0.1", features = ["axum"] }` |
-> | `@RestController` | `axum::Router` + handler 函数 |
-> | `application.yml` | `SaTokenConfig::builder()` |
+> Java 原文对应：`SpringBoot 集成 Sa-Token 示例`  
+> 框架映射：**Spring Boot → axum**（`sa-token-web-axum`）
+
+| Java | Rust (Sa-Token-Rs) |
+|---|---|
+| Spring Boot | axum + tokio |
+| `sa-token-spring-boot3-starter` | `sa-token` + `sa-token-web-axum` |
+| `application.yml` | `SaTokenConfig` + `SaManager::set_config` |
+| `@RestController` | axum handler + `Router` |
 
 本篇带你从零开始集成 Sa-Token-Rs，只需简单 5 步，你就可以快速熟悉框架的使用姿势。
 
-整合示例在官方仓库的`/sa-token-demo/sa-token-demo-axum`文件夹下，如遇到难点可结合源码进行学习测试。
+整合示例在官方仓库的 `crates/sa-token-demo/sa-token-demo-axum` 文件夹下，如遇到难点可结合源码进行学习测试。[Sa-Token-Rs 集成示例大全](/more/download-demos) 。
 
 ---
 
 ### 1、创建项目
 
-使用 `cargo new` 创建一个新的 Rust 项目：
+使用 Cargo 新建一个 Rust 项目，例如：`sa-token-demo-axum`
 
 ```bash
-cargo new sa-token-demo-axum
+cargo new sa-token-demo-axum --bin
 cd sa-token-demo-axum
-cargo add sa-token --features axum
-cargo add axum tokio --features tokio/full
 ```
 
-> 如果 `cargo add` 网络不通，可手动编辑 `Cargo.toml`（详见 [download.md](./download.md)）。
+（不会的同学可参考 [The Cargo Book](https://doc.rust-lang.org/cargo/) 或仓库内已有 demo）
+
 
 ### 2、添加依赖
 
-在 `Cargo.toml` 中添加依赖：
+在项目中添加依赖：
 
-```toml
-[package]
-name = "sa-token-demo-axum"
-version = "0.1.0"
-edition = "2024"
-
+<!---------------------------- tabs:start ---------------------------->
+<!-------- tab:Cargo.toml（推荐） -------->
+``` toml
 [dependencies]
-sa-token = { version = "0.1", features = ["axum"] }
-axum = "0.7"
+# Sa-Token-Rs 权限认证（对应 Java sa-token-spring-boot-starter）
+sa-token = { version = "0.1", path = "../../sa-token" }  # monorepo 内用 path；发布后可写 version
+sa-token-web-axum = { version = "0.1", path = "../../sa-token-web/sa-token-web-axum" }
+axum = "0.8"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 ```
 
-> - 如果你使用其它 Web 框架（Actix-web / Salvo / Rocket），引入对应的 starter：`sa-token-actix`、`sa-token-salvo` 等。
+- 若使用 **actix-web**（对应 Java Solon / Quarkus），请引入 `sa-token-web-actix`，见 [actix 集成](/start/solon-example)。
+- 若使用 **Salvo**，请引入 `sa-token-web-salvo`。
 
-依赖一直无法加载成功？参考 [Cargo 依赖问题解决方案](./maven-pull.md)（标题保留兼容，内部内容已改为 Cargo）。
+<!-------- tab:Java 对照（Maven） -------->
+``` xml
+<!-- 以下为 Java 原版依赖，仅作对照，Rust 项目请用上方 Cargo.toml -->
+<dependency>
+	<groupId>cn.dev33</groupId>
+	<artifactId>sa-token-spring-boot3-starter</artifactId>
+	<version>${sa.top.version}</version>
+</dependency>
+```
+<!---------------------------- tabs:end ---------------------------->
+
+
+Cargo 依赖一直无法加载成功？[参考解决方案](/start/maven-pull)
+
+更多版本了解：[Sa-Token-Rs 最新版本](/start/new-version.md)
 
 ### 3、设置配置
 
-你可以**零配置启动项目** ，但同时你也可以在代码中以 `SaTokenConfig::builder()` 方式定制：
+你可以**零配置启动项目**，但同时你也可以在启动代码中定制 `SaTokenConfig`（对应 Java `application.yml` 中的 `sa-token.*`）：
 
-```rust
+<!---------------------------- tabs:start ---------------------------->
+
+<!------------- tab:Rust 代码配置（推荐）  ------------->
+``` rust
 use std::sync::Arc;
-use sa_token::SaTokenConfig;
-use sa_token::sa_manager::SaManager;
-use sa_token::stp::StpLogic::StpLogic;
+use sa_token::prelude::*;
+
+/// 初始化配置（对应 Java application.yml 中的 sa-token 段）
+fn init_sa_token() {
+    SaManager::set_config(Arc::new(SaTokenConfig {
+        // token 名称（同时也是 cookie / header 名称）
+        token_name: "satoken".into(),
+        // token 有效期（单位：秒） 默认30天，-1 代表永久有效
+        timeout: 2_592_000,
+        // token 最低活跃频率（单位：秒），-1 代表不限制
+        active_timeout: -1,
+        // 是否允许同一账号多地同时登录
+        is_concurrent: true,
+        // 多人登录同一账号时是否共用一个 token
+        is_share: false,
+        // token 风格：uuid / simple-uuid / random-32 / ...
+        token_style: SaTokenStyle::Uuid,
+        // 是否输出操作日志
+        is_log: true,
+        ..Default::default()
+    }));
+    SaManager::set_sa_token_dao(Arc::new(SaTokenDaoMemory::new()));
+    SaManager::put_stp_logic(Arc::new(StpLogic::new("login")));
+}
+```
+
+<!------------- tab:YAML 语义对照（Java 风格）  ------------->
+``` yaml
+# 以下为 Java application.yml 语义对照，Rust 中请用上方 SaTokenConfig 字段
+server:
+    port: 8081
+
+sa-token:
+	token-name: satoken
+	timeout: 2592000
+	active-timeout: -1
+	is-concurrent: true
+	is-share: false
+	token-style: uuid
+	is-log: true
+```
+
+<!---------------------------- tabs:end ---------------------------->
+
+
+### 4、创建启动入口
+
+在 `src/main.rs` 中写入：
+
+``` rust
+use std::sync::Arc;
+use axum::{routing::get, Router};
+use sa_token::prelude::*;
+use sa_token_web_axum::SaTokenLayer;
 
 #[tokio::main]
 async fn main() {
-    // 1. 初始化全局配置
-    let config = SaTokenConfig::builder()
-        .token_name("satoken")                    // token 名称（同时也是 cookie 名称）
-        .timeout(30 * 24 * 60 * 60)               // token 有效期（秒），默认30天，-1 代表永久有效
-        .active_timeout(-1)                        // token 最低活跃频率（秒），-1 代表不限制
-        .is_concurrent(true)                       // 是否允许同一账号多地同时登录
-        .is_share(false)                           // 多人登录同一账号时是否共用一个 token
-        .token_style("uuid")                       // uuid / simple-uuid / random-32 / random-64 / random-128 / tik
-        .is_log(true)                              // 是否输出操作日志
-        .build();
+    init_sa_token(); // 见上一节
 
-    SaManager::set_config(Arc::new(config));
+    let app = Router::new()
+        .route("/user/doLogin", get(do_login))
+        .route("/user/isLogin", get(is_login))
+        .layer(SaTokenLayer::new());
 
-    // 2. 注册 StpLogic（"login" 是账号类型，可自定义如 "admin"、"user" 等）
-    SaManager::put_stp_logic(Arc::new(StpLogic::new("login")));
-
-    // 3. 启动 Axum 服务
-    let app = axum::Router::new()
-        .route("/user/doLogin", axum::routing::get(user_do_login))
-        .route("/user/isLogin", axum::routing::get(user_is_login));
-
+    println!("启动成功，Sa-Token-Rs 已初始化");
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8081").await.unwrap();
-    println!("启动成功，Sa-Token 配置：{}", SaManager::config());
     axum::serve(listener, app).await.unwrap();
 }
 ```
 
-> **等价的 application.yml 配置**（如果你更熟悉 YAML 风格）：
->
-> ```yaml
-> ############## Sa-Token 配置 ##############
-> sa-token:
->   token-name: satoken
->   timeout: 2592000         # 30 天
->   active-timeout: -1       # 不限制
->   is-concurrent: true
->   is-share: false
->   token-style: uuid
->   is-log: true
-> ```
->
-> 在 Rust 中你需要转换为 `SaTokenConfig::builder()` 链式调用。
+| Java | Rust |
+|---|---|
+| `@SpringBootApplication` + `main` | `#[tokio::main]` + `axum::serve` |
+| `SaManager.getConfig()` | `SaManager` 已通过 `set_config` 注入 |
 
-### 4、创建业务 Handler
 
-```rust
-use axum::Json;
-use sa_token::stp::StpUtil;
-use serde_json::{json, Value};
+### 5、创建测试 Handler（对应 Controller）
+
+``` rust
+use axum::extract::Query;
+use sa_token::prelude::*;
+use serde::Deserialize;
+use std::collections::HashMap;
 
 // 测试登录，浏览器访问： http://localhost:8081/user/doLogin?username=zhang&password=123456
-async fn user_do_login(
-    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
-) -> Json<Value> {
+async fn do_login(Query(params): Query<HashMap<String, String>>) -> String {
     let username = params.get("username").map(|s| s.as_str()).unwrap_or("");
     let password = params.get("password").map(|s| s.as_str()).unwrap_or("");
-
     // 此处仅作模拟示例，真实项目需要从数据库中查询数据进行比对
     if username == "zhang" && password == "123456" {
-        StpUtil::login("10001").unwrap();
-        Json(json!({ "msg": "登录成功" }))
+        let _ = StpUtil::login("10001");
+        "登录成功".into()
     } else {
-        Json(json!({ "msg": "登录失败" }))
+        "登录失败".into()
     }
 }
 
 // 查询登录状态，浏览器访问： http://localhost:8081/user/isLogin
-async fn user_is_login() -> Json<Value> {
-    Json(json!({
-        "isLogin": StpUtil::is_login()
-    }))
+async fn is_login() -> String {
+    format!(
+        "当前会话是否登录：{}",
+        StpUtil::is_login().unwrap_or(false)
+    )
 }
 ```
 
-### 5、运行
+| Java | Rust |
+|---|---|
+| `StpUtil.login(10001)` | `StpUtil::login("10001")?` |
+| `StpUtil.isLogin()` | `StpUtil::is_login()?` |
+| `@RequestMapping("doLogin")` | `.route("/user/doLogin", get(do_login))` |
+
+### 6、运行
 
 ```bash
-cargo run
+cargo run -p sa-token-demo-axum
+# 或在本示例目录：cargo run
 ```
 
-从浏览器依次访问：
+从浏览器依次访问上述测试接口：
 
-- `http://localhost:8081/user/doLogin?username=zhang&password=123456` → 返回 `{"msg":"登录成功"}`
-- `http://localhost:8081/user/isLogin` → 返回 `{"isLogin":true}`
+<img src="/big-file/doc/start/test-do-login.png" alt="运行结果">
+
+<img src="/big-file/doc/start/test-is-login.png" alt="运行结果">
+
+<!--
+### 无 Web 框架环境
+若仅使用 core（无 axum/actix），需自行实现 / 注入 SaTokenContext，参考：[自定义 SaTokenContext 指南](/fun/sa-token-context)
+-->
+
 
 ### 出发
 
 通过这个示例，你已经对 Sa-Token-Rs 有了初步的了解。那么，坐稳扶好，让我们开始吧：[登录认证](/use/login-auth)
-
----
-
-## 与 Java 版的关键差异
-
-| 方面 | Java (sa-token) | Rust (sa-token-rs) |
-| --- | --- | --- |
-| Web 框架 | SpringBoot | Axum（另有 Actix/Salvo/Rocket starter） |
-| 依赖管理 | Maven / Gradle | Cargo |
-| 启动方式 | `@SpringBootApplication` | `#[tokio::main]` + `axum::serve` |
-| 配置 | `application.yml` | `SaTokenConfig::builder()` Rust DSL |
-| 登录注解 | `@SaCheckLogin` | `#[sa_check_login]`（proc-macro） |
-| 自动注入 | Spring Bean | 手动 `SaManager::set_*` |
-| Cookie | `HttpServletResponse.addCookie` | `Set-Cookie` header（在 SaTokenContext 中实现） |
-
-> 注：本示例使用最简同步风格的 axum handler，生产项目可按需使用 `axum::extract::State`、`axum::middleware` 等异步模式。详细见 [sa-token-axum 文档](../../sa-token-axum/)。

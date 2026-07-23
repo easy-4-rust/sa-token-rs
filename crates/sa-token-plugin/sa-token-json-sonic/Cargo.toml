@@ -1,0 +1,15 @@
+[package]
+name = "sa-token-json-sonic"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "sonic-rs based JSON template implementation for sa-token-rs (Rust port of sonic by cloudwego)"
+
+[dependencies]
+sa-token-core.workspace = true
+serde_json.workspace = true
+sonic-rs = "0.3"
+
+[lints]
+workspace = true

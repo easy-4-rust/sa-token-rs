@@ -1,0 +1,16 @@
+[package]
+name = "sa-token-dao-sweeper"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Background sweeper for sa-token-rs DAO (Java sa-token-hutool-timed-cache equivalent)"
+
+[dependencies]
+sa-token-core.workspace = true
+sa-token-dao-memory.workspace = true
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time", "sync"] }
+tracing.workspace = true
+
+[lints]
+workspace = true

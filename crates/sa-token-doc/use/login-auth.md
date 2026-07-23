@@ -1,16 +1,17 @@
 # 登录认证
 
-> **⚠️ 文档适配状态**：本文档为 Java 官方文档的 Rust 移植版，代码示例使用
-> **axum + sa-token-rs** 栈，原始 SpringBoot 语义保持一致。
->
-> | Java | Rust |
-> |---|---|
-> | Spring Boot | axum + tokio |
-> | `@RequestMapping("doLogin")` | `.route("/acc/doLogin", post(...))` |
-> | `StpUtil.login(id)` | `StpUtil::login(id).await?` |
-> | `SaResult.ok("登录成功")` | `Json(json!({ "ok": true, "message": "登录成功" }))` |
+> 本文保留 Java 原文章节结构与说明文字，示例已改为 **Sa-Token-Rs（Rust）**。
 
---- 
+| Java | Rust |
+|---|---|
+| `StpUtil.login(10001)` | `StpUtil::login("10001")?` |
+| `StpUtil.isLogin()` | `StpUtil::is_login()?` |
+| `StpUtil.checkLogin()` | `StpUtil::check_login()?` |
+| `SaResult.ok(...)` | `Json(serde_json::json!({ ... }))` 等 |
+| `@RequestMapping` | axum `Router` / actix `App` |
+
+---
+
 
 ### 1、开始登录
 
@@ -29,9 +30,9 @@
 当我们拿到 userId 后，便可以调用框架提供的 API 进行登录：
 
 ``` rust
-// 会话登录：参数填写要登录的账号id，建议的数据类型：i64 | u64 | &str，
-// 不可以传入复杂类型，如：结构体、引用业务实体等等。
-StpUtil::login(user_id).await?;	 
+// 会话登录：参数填写要登录的账号 id，建议使用 &str（由业务侧把数字 id 转成字符串）
+// 不可以传入复杂类型，如：结构体 User、Admin 等等
+StpUtil::login("10001")?;
 ```
 
 只此一句代码，便可以使会话登录成功。实际上，Sa-Token-Rs 在背后做了大量的工作，包括但不限于：
@@ -49,26 +50,26 @@ StpUtil::login(user_id).await?;
 所以一般情况下，我们的登录接口代码，会大致类似如下：
 
 ``` rust
-use axum::{extract::Query, routing::post, Json, Router};
+use axum::{extract::Query, Json};
+use sa_token::prelude::*;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 struct LoginQuery {
     name: String,
     pwd: String,
 }
 
-// 会话登录接口 ---- GET /doLogin?name=zhang&pwd=123456
+/// 会话登录接口 —— 对应 Java @RequestMapping("doLogin")
 async fn do_login(Query(q): Query<LoginQuery>) -> Json<Value> {
     // 第一步：比对前端提交的账号名称、密码
     if q.name == "zhang" && q.pwd == "123456" {
-        // 第二步：根据账号id，进行登录
-        let _ = sa_token_core::StpUtil::login(10001_i64).await;
-        Json(json!({ "ok": true, "message": "登录成功" }))
-    } else {
-        Json(json!({ "ok": false, "message": "登录失败" }))
+        // 第二步：根据账号 id，进行登录
+        let _ = StpUtil::login("10001");
+        return Json(json!({ "code": 200, "msg": "登录成功" }));
     }
+    Json(json!({ "code": 500, "msg": "登录失败" }))
 }
 ```
 
@@ -94,7 +95,7 @@ async fn do_login(Query(q): Query<LoginQuery>) -> Json<Value> {
 对于一些登录之后才能访问的接口（例如：查询我的账号资料），我们通常的做法是增加一层接口校验：
 
 - 如果校验通过，则：<green>正常返回数据。</green>
-- 如果校验未通过，则：<red>抛出异常，告知其需要先进行登录。</red>
+- 如果校验未通过，则：<red>抛出异常（返回 Err），告知其需要先进行登录。</red>
 
 <img class="w-100" src="/big-file/doc/use/use-login-check.svg" />
 
@@ -103,20 +104,19 @@ async fn do_login(Query(q): Query<LoginQuery>) -> Json<Value> {
 使用以下方法判断当前会话是否已登录：
 
 ``` rust
-// 判断当前会话是否已经登录，返回 true=已登录，false=未登录
-let logged_in: bool = StpUtil::is_login().await;
+// 判断当前会话是否已经登录，返回 Ok(true)=已登录，Ok(false)=未登录
+StpUtil::is_login()?;
 
-// 检验当前会话是否已经登录, 如果已登录代码会安全通过，
-// 未登录则抛出异常：`NotLoginException`
-StpUtil::check_login().await?;
+// 检验当前会话是否已经登录；已登录则 Ok(())，未登录则返回 Err（对应 Java NotLoginException）
+StpUtil::check_login()?;
 ```
 
 例如我们可以在接口内，根据是否登录返回不同的信息：
 
 ``` rust
-// 获取我的资料信息 ---- GET /myInfo
+/// 获取我的资料信息
 async fn my_info() -> &'static str {
-    if StpUtil::is_login().await {
+    if StpUtil::is_login().unwrap_or(false) {
         // ...
         "我的资料信息..."
     } else {
@@ -125,43 +125,36 @@ async fn my_info() -> &'static str {
 }
 ```
 
-或者在未登录时直接抛出全局异常：
+或者在未登录时直接返回错误：
 
 ``` rust
-// 获取我的资料信息 ---- GET /myInfo
-async fn my_info() -> &'static str {
-    // 如果当前未登录，这句代码会直接抛出异常 `NotLoginException`
-    StpUtil::check_login().await?;
-    "我的资料信息"
+/// 获取我的资料信息
+async fn my_info() -> SaResult<&'static str> {
+    StpUtil::check_login()?; // 如果当前未登录，这句会直接返回 Err
+    Ok("我的资料信息")
 }
 ```
 
-配合全局异常处理器，统一返回固定格式数据到前端：
+配合全局错误处理，统一返回固定格式数据到前端：
 
 ``` rust
-use axum::{
-    http::StatusCode,
-    response::{IntoResponse, Response},
-    Json,
-};
-use sa_token_core::error::NotLoginException;
-use serde_json::{json};
+use axum::{http::StatusCode, response::IntoResponse, Json};
+use serde_json::json;
 
-// 等价于 Java 的 @RestControllerAdvice
-async fn handle_not_login(e: NotLoginException) -> Response {
+/// 对应 Java @RestControllerAdvice + @ExceptionHandler(NotLoginException.class)
+fn map_not_login(msg: impl ToString) -> impl IntoResponse {
     (
         StatusCode::UNAUTHORIZED,
-        Json(json!({ "ok": false, "message": e.to_string() })),
+        Json(json!({ "code": 401, "msg": msg.to_string() })),
     )
-        .into_response()
 }
 ```
 
-异常 <red>`NotLoginException`</red> 代表当前会话暂未登录，可能的原因有很多：
+异常 / 错误 <red>`NotLogin`</red>（Java 中为 `NotLoginException`）代表当前会话暂未登录，可能的原因有很多：
 - 前端没有提交 token。
 - 前端提交的 token 是无效的。
 - 前端提交的 token 已经过期。
-- …… 
+- ……
 
 可参照此篇：[未登录场景值](/fun/not-login-scene)，了解如何获取未登录的场景值。
 
@@ -171,42 +164,44 @@ async fn handle_not_login(e: NotLoginException) -> Response {
 如果你想要获取当前登录的是谁：
 
 ``` rust
-// 获取当前会话账号id, 如果未登录，则抛出异常：`NotLoginException`
-let login_id: i64 = StpUtil::get_login_id().await?;
+// 获取当前会话账号 id，如果未登录，则返回 Err（对应 NotLoginException）
+StpUtil::get_login_id()?;
 
 // 类似查询 API 还有：
-let login_id_str: String = StpUtil::get_login_id_as_string().await?; // 转化为 `String` 类型
-let login_id_int: i32   = StpUtil::get_login_id_as_int().await?;    // 转化为 `i32` 类型
-let login_id_long: i64  = StpUtil::get_login_id_as_long().await?;   // 转化为 `i64` 类型
+StpUtil::get_login_id_as_string()?; // 获取当前会话账号 id，并转化为 String
+StpUtil::get_login_id_as_i32()?;    // 转化为 i32
+StpUtil::get_login_id_as_i64()?;    // 转化为 i64
 
 // ---------- 以下方法可以指定未登录情形下返回的默认值 ----------
 
-// 获取当前会话账号id, 如果未登录，则返回 `None`
-let login_id_opt: Option<i64> = StpUtil::get_login_id_default_null().await;
-
-// 获取当前会话账号id, 如果未登录，则返回默认值
-// （`default_value` 可以是任意实现了 `LoginId` trait 的类型）
-let login_id: i64 = StpUtil::get_login_id_or(0_i64).await;
+// 获取当前会话账号 id，如果未登录，则返回 None
+StpUtil::get_login_id_default_null()?;
 ```
+
+| Java | Rust |
+|---|---|
+| `StpUtil.getLoginId()` | `StpUtil::get_login_id()?` |
+| `StpUtil.getLoginIdAsLong()` | `StpUtil::get_login_id_as_i64()?` |
+| `StpUtil.getLoginIdDefaultNull()` | `StpUtil::get_login_id_default_null()?` |
 
 
 ### 4、token 查询
 
 ``` rust
-// 获取当前会话的 token 值
-let token: String = StpUtil::get_token_value().await?;
+// 获取当前会话的 token 值（Option）
+StpUtil::get_token_value();
 
-// 获取当前 `StpLogic` 的 token 名称
-let name: &'static str = StpUtil::get_token_name();
+// 获取当前 StpLogic 的 token 名称
+StpUtil::get_token_name();
 
-// 获取指定 token 对应的账号id，如果未登录，则返回 `None`
-let login_id: Option<i64> = StpUtil::get_login_id_by_token("token_value").await?;
+// 获取指定 token 对应的账号 id，如果未登录，则返回 None
+StpUtil::get_login_id_by_token("token_value")?;
 
 // 获取当前会话剩余有效期（单位：s，返回 -1 代表永久有效）
-let timeout: i64 = StpUtil::get_token_timeout().await?;
+StpUtil::get_token_timeout()?;
 
 // 获取当前会话的 token 信息参数
-let info: sa_token_core::TokenInfo = StpUtil::get_token_info().await?;
+StpUtil::get_token_info()?;
 ```
 
 有关 `TokenInfo` 参数详解，请参考：[TokenInfo 参数详解](/fun/token-info)
@@ -216,13 +211,13 @@ let info: sa_token_core::TokenInfo = StpUtil::get_token_info().await?;
 
 ``` rust
 // 当前会话注销登录
-StpUtil::logout().await?;
+StpUtil::logout()?;
 ```
 
 
 ### 6、来个小测试，加深一下理解
 
-新建 `login_controller.rs`，复制或手动敲出以下代码：
+新建 `login_controller` 模块，复制或手动敲出以下代码：
 
 ``` rust
 use axum::{
@@ -230,57 +225,66 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use sa_token::prelude::*;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 struct LoginQuery {
     name: String,
     pwd: String,
 }
 
-// 测试登录  ---- GET /acc/doLogin?name=zhang&pwd=123456
+/// 登录测试 —— 对应 Java LoginController
+/// 测试登录  ---- http://localhost:8081/acc/doLogin?name=zhang&pwd=123456
 async fn do_login(Query(q): Query<LoginQuery>) -> Json<Value> {
     // 此处仅作模拟示例，真实项目需要从数据库中查询数据进行比对
     if q.name == "zhang" && q.pwd == "123456" {
-        let _ = sa_token_core::StpUtil::login(10001_i64).await;
-        Json(json!({ "ok": true, "message": "登录成功" }))
+        let _ = StpUtil::login("10001");
+        Json(json!({ "code": 200, "msg": "登录成功" }))
     } else {
-        Json(json!({ "ok": false, "message": "登录失败" }))
+        Json(json!({ "code": 500, "msg": "登录失败" }))
     }
 }
 
-// 查询登录状态  ---- GET /acc/isLogin
+/// 查询登录状态  ---- http://localhost:8081/acc/isLogin
 async fn is_login() -> Json<Value> {
-    let logged_in = sa_token_core::StpUtil::is_login().await;
-    Json(json!({ "ok": true, "message": format!("是否登录：{logged_in}") }))
+    Json(json!({
+        "code": 200,
+        "msg": format!("是否登录：{}", StpUtil::is_login().unwrap_or(false))
+    }))
 }
 
-// 查询 Token 信息  ---- GET /acc/tokenInfo
+/// 查询 Token 信息  ---- http://localhost:8081/acc/tokenInfo
 async fn token_info() -> Json<Value> {
-    let info = sa_token_core::StpUtil::get_token_info().await.unwrap_or_default();
-    Json(json!({ "ok": true, "data": info }))
+    match StpUtil::get_token_info() {
+        Ok(info) => Json(json!({ "code": 200, "data": format!("{info:?}") })),
+        Err(e) => Json(json!({ "code": 500, "msg": e.to_string() })),
+    }
 }
 
-// 测试注销  ---- GET /acc/logout
+/// 测试注销  ---- http://localhost:8081/acc/logout
 async fn logout() -> Json<Value> {
-    let _ = sa_token_core::StpUtil::logout().await;
-    Json(json!({ "ok": true }))
+    let _ = StpUtil::logout();
+    Json(json!({ "code": 200 }))
 }
 
+/// 组装路由
 pub fn router() -> Router {
     Router::new()
-        .route("/acc/doLogin", post(do_login))
+        .route("/acc/doLogin", get(do_login).post(do_login))
         .route("/acc/isLogin", get(is_login))
         .route("/acc/tokenInfo", get(token_info))
         .route("/acc/logout", get(logout))
 }
 ```
 
+完整可运行工程见：`crates/sa-token-demo/sa-token-demo-axum`。
+
 ---
 
-<a class="case-btn" href="https://github.com/your-org/sa-token-rs/blob/main/crates/sa-token-demo-axum/src/login_controller.rs"
+<a class="case-btn" href="https://github.com/easy-4-rust/sa-token-rs/tree/main/crates/sa-token-demo/sa-token-demo-axum"
 	target="_blank">
-	本章代码示例：Sa-Token-Rs 登录认证 —— [ login_controller.rs ]
+	本章代码示例：Sa-Token-Rs 登录认证 —— [ sa-token-demo-axum ]
 </a>
 <a class="dt-btn" href="https://www.wenjuan.ltd/s/UZBZJvb2ej/" target="_blank">本章小练习：Sa-Token 基础 - 登录认证，章节测试</a>

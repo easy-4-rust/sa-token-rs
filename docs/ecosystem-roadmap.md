@@ -232,6 +232,14 @@ jobs:
 
 ### 5.3 文档对照
 
+| 文档 | Java Sa-Token | Sa-Token-Rs |
+|---|---|---|
+| 入门指南 | `sa-token.cc/doc.html` | `docs/GUIDE.md` |
+| 架构总览 | `sa-token.cc/doc.html#/plugin/dev-function` | `docs/ARCHITECTURE.md` |
+| 兼容性说明 | 无（Java 版无对照） | `docs/compatibility.md` |
+| 方法级对照 | 无 | `docs/migration/object-method-matrix.md` |
+| 迁移状态 | 无 | `docs/migration/MIGRATION_STATUS.md` |
+
 - [migration/object-method-matrix.md](./migration/object-method-matrix.md) 维护方法级对照
 - [migration/CODEGRAPH_METHOD_MAP.md](./migration/CODEGRAPH_METHOD_MAP.md) 维护审计记录
 
@@ -267,4 +275,4 @@ jobs:
 - [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) - 完整实施计划
 - [migration/MIGRATION_STATUS.md](./migration/MIGRATION_STATUS.md) - 迁移进度
 - **Sa-Token Java 官方路线图**：https://sa-token.cc
-- **easyexcel-rs 生态路线图**：`/Users/wandl/workspaces/workspace-github/easyexcel-rs/docs/ecosystem-roadmap.md`
+- **easyexcel-rs 生态路线图**：<https://github.com/easy-4-rust/easyexcel-rs/blob/main/docs/ecosystem-roadmap.md>

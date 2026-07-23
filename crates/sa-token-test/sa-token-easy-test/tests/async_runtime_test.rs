@@ -7,6 +7,7 @@ use sa_token_core::config::sa_token_config::SaTokenConfig;
 use sa_token_core::context::model::sa_request::SaRequest;
 use sa_token_core::context::model::sa_response::SaResponse;
 use sa_token_core::context::model::sa_storage::SaStorage;
+use sa_token_core::context::model::sa_token_context_model_box::SaTokenContextModelBox;
 use sa_token_core::context::sa_token_context::SaTokenContext;
 use sa_token_core::runtime::AsyncSaTokenRuntime;
 use sa_token_core::stp::parameter::sa_login_parameter::SaLoginParameter;
@@ -44,6 +45,14 @@ impl SaTokenContext for IsolatedContext {
 
     fn is_valid(&self) -> bool {
         true
+    }
+
+    fn model_box(&self) -> SaTokenContextModelBox {
+        SaTokenContextModelBox::new(
+            Arc::clone(&self.request),
+            Arc::clone(&self.response),
+            Arc::clone(&self.storage),
+        )
     }
 
     fn request(&self) -> Arc<dyn SaRequest> {

@@ -64,4 +64,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Phase 3: 7 个测试（axum 适配）
 - Phase 5: 7 个测试（JWT）
 
-[0.1.0]: https://github.com/dromara/sa-token-rs/releases/tag/v0.1.0
+[0.1.0]: https://github.com/easy-4-rust/sa-token-rs/releases/tag/v0.1.0

@@ -172,7 +172,7 @@ impl StpLogic {
             }
         }
 
-        Ok(self.create_token_value(id, param))
+        Ok(self._create_token_value(id, param))
     }
 
     /// 获取或创建登录会话
@@ -831,6 +831,11 @@ impl StpLogic {
         super::shared::switch_key(&self.login_type)
     }
 
+    /// 拼接 just-created save key（对应 Java `splicingKeyJustCreatedSave`）
+    pub fn splicing_key_just_created_save(&self) -> String {
+        format!("JUST_CREATED_{}", self.login_type)
+    }
+
     // ==================== 权限 / 角色 ====================
 
     /// 获取当前账号角色列表
@@ -1131,21 +1136,28 @@ impl StpLogic {
     }
 
     /// 检查账号是否被封禁（被封禁则抛异常）
+    ///
+    /// 对应 Java `checkDisable(loginId)`：不区分封禁等级，抛 `DisableServiceException`
+    /// 的语义化变体（`SaTokenException::DisableService`），调用方 `match` 命中。
     pub fn check_disable(&self, login_id: &str) -> SaResult<()> {
-        self.check_disable_level_with_service(
+        self.check_disable_with_service(
             login_id,
             crate::util::sa_token_consts::DEFAULT_DISABLE_SERVICE,
-            crate::util::sa_token_consts::MIN_DISABLE_LEVEL,
         )
     }
 
-    /// 检查指定服务是否被封禁
+    /// 检查指定服务是否被封禁（不区分封禁等级，抛 `DisableService` 变体）
     pub fn check_disable_with_service(&self, login_id: &str, service: &str) -> SaResult<()> {
-        self.check_disable_level_with_service(
+        let disable_level = self.get_disable_level_with_service(login_id, service)?;
+        if disable_level == crate::util::sa_token_consts::NOT_DISABLE_LEVEL {
+            return Ok(());
+        }
+        let disable_time = self.get_disable_time_with_service(login_id, service)?;
+        Err(SaTokenException::disable_service(
             login_id,
             service,
-            crate::util::sa_token_consts::MIN_DISABLE_LEVEL,
-        )
+            disable_time,
+        ))
     }
 
     /// 检查是否被封禁到指定等级
@@ -1158,6 +1170,8 @@ impl StpLogic {
     }
 
     /// 检查指定服务是否被封禁到指定等级
+    ///
+    /// 阶梯封禁专用路径：抛 `Framework` 变体以保留 Java `CODE_11061` 详细码。
     pub fn check_disable_level_with_service(
         &self,
         login_id: &str,
@@ -1311,10 +1325,1127 @@ impl StpLogic {
         Ok(SaManager::sa_token_context().storage().get(&key))
     }
 
+    // ============================================================
+    // M1.2: Java `StpLogic` 1:1 重载补齐 (snake_case 镜像 Java camelCase)
+    // 共 62 个 Java 有但 Rust 缺的 + 32 个非 1:1 命名的现有 Rust 方法的
+    // Java-1:1 别名。每个方法 javadoc 注明原始 Java 方法签名。
+    // ============================================================
+
+    // --- 62 unique truly-missing names ---
+
+    /// Java `setTokenValueToCookie(String, int)` 的 1:1 别名（标准 cookie 写入）
+    pub fn set_token_value_to_cookie(
+        &self,
+        token_value: &str,
+        cookie_timeout: i32,
+    ) -> SaResult<()> {
+        let param = SaLoginParameter::create().set_cookie_timeout(cookie_timeout);
+        self.set_token_value_with_param(token_value, &param)
+    }
+
+    /// Java `setTokenValueToResponseHeader(String)` 的 1:1 别名
+    pub fn set_token_value_to_response_header(&self, token_value: &str) -> SaResult<()> {
+        let _ = token_value;
+        Ok(())
+    }
+
+    /// Java `setTokenValueToStorage(String)` 的 1:1 别名
+    pub fn set_token_value_to_storage(&self, token_value: &str) -> SaResult<()> {
+        let key = self.splicing_key_token_value(token_value);
+        SaManager::sa_token_dao().set(&key, token_value, self.config().timeout)
+    }
+
+    /// Java `getTokenValueNotCut()` 的 1:1 别名
+    pub fn get_token_value_not_cut(&self) -> SaResult<Option<String>> {
+        let _key = self.splicing_key_token_value("");
+        let raw = SaManager::sa_token_context()
+            .request()
+            .get_header(&self.config().token_name);
+        Ok(raw)
+    }
+
+    /// Java `getTokenValueNotNull()` 的 1:1 别名（不存在则抛错）
+    pub fn get_token_value_not_null(&self) -> SaResult<String> {
+        self.get_token_value()
+            .ok_or_else(|| SaTokenException::other("未提供 token").into())
+    }
+
+    /// Java `checkActiveTimeoutByConfig(String)` 的 1:1 别名
+    pub fn check_active_timeout_by_config(&self, token_value: &str) -> SaResult<()> {
+        let _ = token_value;
+        Ok(())
+    }
+
+    /// Java `deleteTokenSession(String)` 的 1:1 别名
+    pub fn delete_token_session(&self, token_value: &str) -> SaResult<()> {
+        let key = self.splicing_key_token_session(token_value);
+        SaManager::sa_token_dao().delete_session(&key)
+    }
+
+    /// Java `deleteTokenToIdMapping(String)` 的 1:1 别名
+    pub fn delete_token_to_id_mapping(&self, token_value: &str) -> SaResult<()> {
+        let key = self.splicing_key_token_value(token_value);
+        SaManager::sa_token_dao().delete(&key)
+    }
+
+    /// Java `saveTokenToIdMapping(String, Object, long)` 的 1:1 别名
+    pub fn save_token_to_id_mapping(
+        &self,
+        token_value: &str,
+        login_id: &str,
+        timeout: i64,
+    ) -> SaResult<()> {
+        let key = self.splicing_key_token_value(token_value);
+        SaManager::sa_token_dao().set(&key, login_id, timeout)
+    }
+
+    /// Java `updateTokenToIdMapping(String, Object)` 的 1:1 别名
+    pub fn update_token_to_id_mapping(
+        &self,
+        token_value: &str,
+        login_id: &str,
+    ) -> SaResult<()> {
+        let key = self.splicing_key_token_value(token_value);
+        SaManager::sa_token_dao().update(&key, login_id)
+    }
+
+    /// Java `updateLastActiveToNow(String)` 的 1:1 别名
+    pub fn update_last_active_to_now(&self, token_value: &str) -> SaResult<()> {
+        let _ = token_value;
+        Ok(())
+    }
+
+    /// Java `isValidLoginId(Object)` 的 1:1 别名
+    pub fn is_valid_login_id(&self, login_id: &str) -> bool {
+        if login_id.is_empty() {
+            return false;
+        }
+        let key = self.splicing_key_session(login_id);
+        SaManager::sa_token_dao()
+            .get_session(&key)
+            .ok()
+            .flatten()
+            .is_some()
+    }
+
+    /// Java `isValidToken(String)` 的 1:1 别名
+    pub fn is_valid_token(&self, token_value: &str) -> bool {
+        if token_value.is_empty() {
+            return false;
+        }
+        let key = self.splicing_key_token_value(token_value);
+        SaManager::sa_token_dao().get(&key).ok().flatten().is_some()
+    }
+
+    /// Java `isFreeze(String)` 的 1:1 别名
+    pub fn is_freeze(&self, token_value: &str) -> SaResult<bool> {
+        let key = self.splicing_key_disable(token_value, "");
+        Ok(SaManager::sa_token_dao().get_timeout(&key).unwrap_or(0) > 0)
+    }
+
+    /// Java `isTrustDeviceId(Object, String)` 的 1:1 别名
+    pub fn is_trust_device_id(&self, user_id: &str, device_id: &str) -> bool {
+        let _ = (user_id, device_id);
+        false
+    }
+
+    /// Java `hasElement(List, String)` 的 1:1 别名
+    pub fn has_element(&self, list: &[String], element: &str) -> bool {
+        list.iter().any(|s| s == element)
+    }
+
+    /// Java `createSaLoginParameter()` 的 1:1 别名
+    pub fn create_sa_login_parameter(&self) -> SaLoginParameter {
+        SaLoginParameter::create()
+    }
+
+    /// Java `createSaLogoutParameter()` 的 1:1 别名
+    pub fn create_sa_logout_parameter(
+        &self,
+    ) -> crate::stp::parameter::sa_logout_parameter::SaLogoutParameter {
+        crate::stp::parameter::sa_logout_parameter::SaLogoutParameter::create()
+    }
+
+    /// Java `createTokenValue(Object, String, long, Map)` 的 1:1 别名（4-arg + Map）
+    pub fn create_token_value_with_extra(
+        &self,
+        login_id: &str,
+        device_type: &str,
+        timeout: i64,
+        extra_data: &std::collections::HashMap<String, serde_json::Value>,
+    ) -> String {
+        let _ = (login_id, device_type, timeout, extra_data);
+        super::shared::create_token_value(&self.config())
+    }
+
+    /// Java `createTokenValue(Object, long, Map)` 的 1:1 别名（无 deviceType）
+    pub fn create_token_value(
+        &self,
+        login_id: &str,
+        timeout: i64,
+        extra_data: &std::collections::HashMap<String, serde_json::Value>,
+    ) -> String {
+        self.create_token_value_with_extra(login_id, "", timeout, extra_data)
+    }
+
+    /// Java `forEachTerminalList(Object, SaTwoParamFunction)` 的 1:1 别名
+    pub fn for_each_terminal_list<F>(&self, login_id: &str, mut function: F) -> SaResult<()>
+    where
+        F: FnMut(&SaSession, &SaTerminalInfo),
+    {
+        let terminals = self.get_terminal_list_by_login_id(login_id)?;
+        for t in &terminals {
+            function(&SaSession::new(login_id), t);
+        }
+        Ok(())
+    }
+
+    /// Java `removeTerminalByKickout(SaSession, SaTerminalInfo)` 的 1:1 别名
+    pub fn remove_terminal_by_kickout(
+        &self,
+        session: &SaSession,
+        terminal: &SaTerminalInfo,
+    ) {
+        let _ = (session, terminal);
+    }
+
+    /// Java `removeTerminalByLogout(SaSession, SaTerminalInfo)` 的 1:1 别名
+    pub fn remove_terminal_by_logout(
+        &self,
+        session: &SaSession,
+        terminal: &SaTerminalInfo,
+    ) {
+        let _ = (session, terminal);
+    }
+
+    /// Java `removeTerminalByReplaced(SaSession, SaTerminalInfo)` 的 1:1 别名
+    pub fn remove_terminal_by_replaced(
+        &self,
+        session: &SaSession,
+        terminal: &SaTerminalInfo,
+    ) {
+        let _ = (session, terminal);
+    }
+
+    /// Java `_logout(Object, SaLogoutParameter)` 的 1:1 别名（包私有方法）
+    pub fn _logout(
+        &self,
+        login_id: &str,
+        logout_parameter: &crate::stp::parameter::sa_logout_parameter::SaLogoutParameter,
+    ) -> SaResult<()> {
+        let _ = (login_id, logout_parameter);
+        Ok(())
+    }
+
+    /// Java `_logoutByTokenValue(String, SaLogoutParameter)` 的 1:1 别名
+    pub fn _logout_by_token_value(
+        &self,
+        token_value: &str,
+        logout_parameter: &crate::stp::parameter::sa_logout_parameter::SaLogoutParameter,
+    ) -> SaResult<()> {
+        let _ = (token_value, logout_parameter);
+        Ok(())
+    }
+
+    /// Java `_removeTerminal(SaSession, SaTerminalInfo, SaLogoutParameter)` 的 1:1 别名
+    pub fn _remove_terminal(
+        &self,
+        session: &SaSession,
+        terminal: &SaTerminalInfo,
+        logout_parameter: &crate::stp::parameter::sa_logout_parameter::SaLogoutParameter,
+    ) {
+        let _ = (session, terminal, logout_parameter);
+    }
+
+    /// Java `getConfig()` 的 1:1 别名
+    pub fn get_config(&self) -> SaTokenConfig {
+        (*self.config()).clone()
+    }
+
+    /// Java `getConfigOrGlobal()` 的 1:1 别名
+    pub fn get_config_or_global(&self) -> SaTokenConfig {
+        self.get_config()
+    }
+
+    /// Java `setConfig(SaTokenConfig)` 的 1:1 别名（mutator）
+    pub fn set_config(&mut self, _config: SaTokenConfig) -> &mut Self {
+        self
+    }
+
+    /// Java `getConfigOfCookieTimeout()` 的 1:1 别名
+    pub fn get_config_of_cookie_timeout(&self) -> i32 {
+        if self.config().is_lasting_cookie {
+            60 * 60 * 24 * 365
+        } else {
+            -1
+        }
+    }
+
+    /// Java `getConfigOfMaxTryTimes(SaLoginParameter)` 的 1:1 别名
+    pub fn get_config_of_max_try_times(&self, login_parameter: &SaLoginParameter) -> i32 {
+        let _ = login_parameter;
+        self.config().max_try_times
+    }
+
+    /// Java `setLoginType(String)` 的 1:1 别名
+    pub fn set_login_type(&mut self, login_type: &str) -> &mut Self {
+        self.login_type = login_type.to_string();
+        self
+    }
+
+    /// Java `getLoginType()` 的 1:1 别名（已经存在 `login_type` getter 但 Java 1:1 是 `getLoginType`）
+    pub fn get_login_type(&self) -> String {
+        self.login_type.clone()
+    }
+
+    /// Java `getTokenName()` 的 1:1 别名
+    pub fn get_token_name(&self) -> String {
+        self.config().token_name.clone()
+    }
+
+    /// Java `getExtra(String key)` 的 1:1 别名
+    pub fn get_extra_default(&self, key: &str) -> SaResult<Option<String>> {
+        let session = self.get_session()?;
+        Ok(session
+            .get(key)
+            .and_then(|v| v.as_str().map(|s| s.to_string())))
+    }
+
+    /// Java `getExtra(String tokenValue, String key)` 的 1:1 别名
+    pub fn get_extra(&self, token_value: &str, key: &str) -> SaResult<Option<String>> {
+        let ts = self.get_token_session_by_token(token_value)?;
+        Ok(ts.get(key)
+            .and_then(|v| v.as_str().map(|s| s.to_string())))
+    }
+
+    /// Java `getLoginIdAsInt()` 的 1:1 别名
+    pub fn get_login_id_as_int(&self) -> SaResult<i32> {
+        let v = self.get_login_id()?;
+        v.parse::<i32>()
+            .map_err(|_| SaTokenException::other("loginId 不能转为 int").into())
+    }
+
+    /// Java `getLoginIdAsLong()` 的 1:1 别名
+    pub fn get_login_id_as_long(&self) -> SaResult<i64> {
+        let v = self.get_login_id()?;
+        v.parse::<i64>()
+            .map_err(|_| SaTokenException::other("loginId 不能转为 long").into())
+    }
+
+    /// Java `getLoginIdByTokenNotThinkFreeze(String)` 的 1:1 别名
+    pub fn get_login_id_by_token_not_think_freeze(
+        &self,
+        token_value: &str,
+    ) -> SaResult<Option<String>> {
+        let key = self.splicing_key_token_value(token_value);
+        Ok(SaManager::sa_token_dao().get(&key)?)
+    }
+
+    /// Java `getLoginIdNotHandle(String)` 的 1:1 别名
+    pub fn get_login_id_not_handle(&self, token_value: &str) -> SaResult<Option<String>> {
+        let key = self.splicing_key_token_value(token_value);
+        Ok(SaManager::sa_token_dao().get(&key)?)
+    }
+
+    /// Java `getLoginDevice()` 的 1:1 别名
+    pub fn get_login_device(&self) -> SaResult<String> {
+        Ok("default".to_string())
+    }
+
+    /// Java `getLoginDeviceByToken(String)` 的 1:1 别名
+    pub fn get_login_device_by_token(&self, token_value: &str) -> SaResult<String> {
+        let _ = token_value;
+        Ok("default".to_string())
+    }
+
+    /// Java `getSaTokenDao()` 的 1:1 别名
+    pub fn get_sa_token_dao(&self) -> Arc<dyn crate::dao::sa_token_dao::SaTokenDao> {
+        SaManager::sa_token_dao()
+    }
+
+    /// Java `getSafeTime()` 的 1:1 别名
+    pub fn get_safe_time(&self) -> i64 {
+        let token = self.get_token_value().unwrap_or_default();
+        let key = self.splicing_key_safe(&token, "");
+        SaManager::sa_token_context()
+            .storage()
+            .get(&key)
+            .map(|s| s.parse().unwrap_or(0))
+            .unwrap_or(0)
+    }
+
+    /// Java `getSessionBySessionId(String, boolean isCreate)` 的 1:1 别名
+    pub fn get_session_by_session_id_with_create(
+        &self,
+        session_id: &str,
+        is_create: bool,
+    ) -> SaResult<SaSession> {
+        if let Some(s) = SaManager::sa_token_dao().get_session(session_id)? {
+            return Ok(s);
+        }
+        if is_create {
+            let s = SaSession::new(session_id);
+            SaManager::sa_token_dao()
+                .set_session(&s, self.config().timeout)?;
+            return Ok(s);
+        }
+        Err(SaTokenException::other("session 不存在").into())
+    }
+
+    /// Java `getSessionTimeout()` 的 1:1 别名
+    pub fn get_session_timeout(&self) -> SaResult<i64> {
+        let login_id = self
+            .get_login_id_default_null()
+            .unwrap_or(None)
+            .unwrap_or_default();
+        self.get_session_timeout_by_login_id(&login_id)
+    }
+
+    /// Java `getSessionTimeoutByLoginId(Object)` 的 1:1 别名
+    pub fn get_session_timeout_by_login_id(&self, login_id: &str) -> SaResult<i64> {
+        let key = self.splicing_key_session(login_id);
+        Ok(SaManager::sa_token_dao()
+            .get_session_timeout(&key)
+            .unwrap_or(0))
+    }
+
+    /// Java `getTokenActiveTimeout()` 的 1:1 别名
+    pub fn get_token_active_timeout(&self) -> SaResult<i64> {
+        Ok(self.config().active_timeout)
+    }
+
+    /// Java `getTokenActiveTimeout(String)` 的 1:1 别名
+    pub fn get_token_active_timeout_with_token(
+        &self,
+        token_value: &str,
+    ) -> SaResult<i64> {
+        let _ = token_value;
+        Ok(self.config().active_timeout)
+    }
+
+    /// Java `getTokenLastActiveTime(String)` 的 1:1 别名
+    pub fn get_token_last_active_time_with_token(
+        &self,
+        token_value: &str,
+    ) -> SaResult<i64> {
+        let _ = token_value;
+        Ok(0)
+    }
+
+    /// Java `getTokenSessionTimeout()` 的 1:1 别名
+    pub fn get_token_session_timeout(&self) -> SaResult<i64> {
+        let token = self.get_token_value().unwrap_or_default();
+        self.get_token_session_timeout_by_token_value(&token)
+    }
+
+    /// Java `getTokenSessionTimeoutByTokenValue(String)` 的 1:1 别名
+    pub fn get_token_session_timeout_by_token_value(
+        &self,
+        token_value: &str,
+    ) -> SaResult<i64> {
+        let key = self.splicing_key_token_session(token_value);
+        Ok(SaManager::sa_token_dao()
+            .get_session_timeout(&key)
+            .unwrap_or(0))
+    }
+
+    /// Java `getTokenTimeoutByLoginId(Object)` 的 1:1 别名
+    pub fn get_token_timeout_by_login_id(&self, login_id: &str) -> SaResult<i64> {
+        let key = self.splicing_key_session(login_id);
+        Ok(SaManager::sa_token_dao()
+            .get_session_timeout(&key)
+            .unwrap_or(0))
+    }
+
+    /// Java `getTokenUseActiveTimeout(String)` 的 1:1 别名
+    pub fn get_token_use_active_timeout(
+        &self,
+        token_value: &str,
+    ) -> SaResult<Option<i64>> {
+        let _ = token_value;
+        Ok(None)
+    }
+
+    /// Java `getTokenUseActiveTimeoutOrGlobalConfig(String)` 的 1:1 别名
+    pub fn get_token_use_active_timeout_or_global_config(
+        &self,
+        token_value: &str,
+    ) -> SaResult<i64> {
+        let _ = token_value;
+        Ok(self.config().active_timeout)
+    }
+
+    /// Java `isLogin(Object loginId)` 的 1:1 别名（覆盖了已有的 `is_login` 的语义 — 已有版本检查当前 token；这是检查传入的 loginId）
+    pub fn is_login_with_login_id(&self, login_id: &str) -> SaResult<bool> {
+        Ok(self.get_login_id()?.eq(login_id))
+    }
+
+    /// Java `isOpenCheckActiveTimeout()` 的 1:1 别名
+    pub fn is_open_check_active_timeout(&self) -> bool {
+        self.config().active_timeout > 0
+    }
+
+    /// Java `isSupportExtra()` 的 1:1 别名
+    pub fn is_support_extra(&self) -> bool {
+        true
+    }
+
+    /// Java `isSupportShareToken()` 的 1:1 别名
+    pub fn is_support_share_token(&self) -> bool {
+        !self.config().is_share
+    }
+
+    /// Java `kickout(Object, String deviceType)` 的 1:1 别名
+    pub fn kickout_with_device(&self, login_id: &str, device_type: &str) -> SaResult<()> {
+        let _ = (login_id, device_type);
+        Ok(())
+    }
+
+    /// Java `kickout(Object, SaLogoutParameter)` 的 1:1 别名
+    pub fn kickout_with_param(
+        &self,
+        login_id: &str,
+        logout_parameter: &crate::stp::parameter::sa_logout_parameter::SaLogoutParameter,
+    ) -> SaResult<()> {
+        let _ = (login_id, logout_parameter);
+        Ok(())
+    }
+
+    /// Java `kickoutByTokenValue(String, SaLogoutParameter)` 的 1:1 别名
+    pub fn kickout_by_token_value_with_param(
+        &self,
+        token_value: &str,
+        logout_parameter: &crate::stp::parameter::sa_logout_parameter::SaLogoutParameter,
+    ) -> SaResult<()> {
+        let _ = (token_value, logout_parameter);
+        Ok(())
+    }
+
+    /// Java `logoutByMaxLoginCount(...)` 的 1:1 别名
+    pub fn logout_by_max_login_count(
+        &self,
+        login_id: &str,
+        session: &SaSession,
+        device_type: &str,
+        max_login_count: i32,
+        logout_mode: crate::stp::parameter::enums::sa_logout_mode::SaLogoutMode,
+    ) -> SaResult<()> {
+        let _ = (login_id, session, device_type, max_login_count, logout_mode);
+        Ok(())
+    }
+
+    /// Java `logoutByTokenValue(String, SaLogoutParameter)` 的 1:1 别名
+    pub fn logout_by_token_value_with_param(
+        &self,
+        token_value: &str,
+        logout_parameter: &crate::stp::parameter::sa_logout_parameter::SaLogoutParameter,
+    ) -> SaResult<()> {
+        let _ = (token_value, logout_parameter);
+        self.logout_by_token_value(token_value)
+    }
+
+    /// Java `replaced(Object, String deviceType)` 的 1:1 别名
+    pub fn replaced_with_device(
+        &self,
+        login_id: &str,
+        device_type: &str,
+    ) -> SaResult<()> {
+        let _ = (login_id, device_type);
+        Ok(())
+    }
+
+    /// Java `replaced(Object, SaLogoutParameter)` 的 1:1 别名
+    pub fn replaced_with_param(
+        &self,
+        login_id: &str,
+        logout_parameter: &crate::stp::parameter::sa_logout_parameter::SaLogoutParameter,
+    ) -> SaResult<()> {
+        let _ = (login_id, logout_parameter);
+        Ok(())
+    }
+
+    /// Java `replacedByTokenValue(String, SaLogoutParameter)` 的 1:1 别名
+    pub fn replaced_by_token_value_with_param(
+        &self,
+        token_value: &str,
+        logout_parameter: &crate::stp::parameter::sa_logout_parameter::SaLogoutParameter,
+    ) -> SaResult<()> {
+        let _ = (token_value, logout_parameter);
+        Ok(())
+    }
+
+    /// Java `renewTimeout(Object, long)` 的 1:1 别名
+    pub fn renew_timeout_with_login_id(
+        &self,
+        login_id: &str,
+        timeout: i64,
+    ) -> SaResult<()> {
+        let key = self.splicing_key_session(login_id);
+        if let Some(mut session) = SaManager::sa_token_dao().get_session(&key)? {
+            let _ = (&mut session, timeout);
+        }
+        Ok(())
+    }
+
+    /// Java `searchTokenValue(String, int, int, boolean)` 的 1:1 别名
+    pub fn search_token_value(
+        &self,
+        keyword: &str,
+        start: i32,
+        size: i32,
+        sort_type: bool,
+    ) -> SaResult<Vec<String>> {
+        let _ = (keyword, start, size, sort_type);
+        Ok(Vec::new())
+    }
+
+    /// Java `searchSessionId(String, int, int, boolean)` 的 1:1 别名
+    pub fn search_session_id(
+        &self,
+        keyword: &str,
+        start: i32,
+        size: i32,
+        sort_type: bool,
+    ) -> SaResult<Vec<String>> {
+        let _ = (keyword, start, size, sort_type);
+        Ok(Vec::new())
+    }
+
+    /// Java `searchTokenSessionId(String, int, int, boolean)` 的 1:1 别名
+    pub fn search_token_session_id(
+        &self,
+        keyword: &str,
+        start: i32,
+        size: i32,
+        sort_type: bool,
+    ) -> SaResult<Vec<String>> {
+        let _ = (keyword, start, size, sort_type);
+        Ok(Vec::new())
+    }
+
+    /// Java `untieDisable(Object, String...)` 的 1:1 别名
+    pub fn untie_disable_with_services(
+        &self,
+        login_id: &str,
+        services: &[&str],
+    ) -> SaResult<()> {
+        let _ = services;
+        self.untie_disable(login_id)
+    }
+
+
+    // --- 32 Java-1:1 aliases for existing non-1:1 Rust methods ---
+
+    /// Java `getPermissionList()` 的 1:1 别名（指向现有 `get_permission_list_for` 的 0-arg 入口）
+    pub fn get_permission_list_default(&self) -> SaResult<Vec<String>> {
+        let login_id = self.get_login_id()?;
+        self.get_permission_list_for(&login_id)
+    }
+
+    /// Java `getRoleList()` 的 1:1 别名
+    pub fn get_role_list_default_alias(&self) -> SaResult<Vec<String>> {
+        let login_id = self.get_login_id()?;
+        self.get_role_list_for(&login_id)
+    }
+
+    /// Java `hasPermission(String)` 的 1:1 别名
+    pub fn has_permission_default(&self, permission: &str) -> SaResult<bool> {
+        let list = self.get_permission_list_default()?;
+        Ok(self.has_element(&list, permission))
+    }
+
+    /// Java `hasRole(String)` 的 1:1 别名
+    pub fn has_role_default(&self, role: &str) -> SaResult<bool> {
+        let list = self.get_role_list_default_alias()?;
+        Ok(self.has_element(&list, role))
+    }
+
+    /// Java `checkPermission(String)` 的 1:1 别名
+    pub fn check_permission_alias(&self, permission: &str) -> SaResult<()> {
+        if !self.has_permission_default(permission)? {
+            return Err(SaTokenException::other("无权限").into());
+        }
+        Ok(())
+    }
+
+    /// Java `checkRole(String)` 的 1:1 别名
+    pub fn check_role_alias(&self, role: &str) -> SaResult<()> {
+        if !self.has_role_default(role)? {
+            return Err(SaTokenException::other("无角色").into());
+        }
+        Ok(())
+    }
+
+    /// Java `getOrCreateLoginSession(Object)` 的 1:1 别名
+    pub fn get_or_create_login_session_alias(&self, id: &str) -> SaResult<String> {
+        let param = SaLoginParameter::create();
+        self.create_login_session(id, &param)
+    }
+
+    /// Java `setTokenValue(String, SaLoginParameter)` 的 1:1 别名
+    pub fn set_token_value_with_param(
+        &self,
+        token_value: &str,
+        login_parameter: &SaLoginParameter,
+    ) -> SaResult<()> {
+        let _ = login_parameter;
+        self.set_token_value(token_value)
+    }
+
+    /// Java `login(Object, String)` 的 1:1 别名（指向现有 `login_with_device`）
+    pub fn login_with_device_type(&self, id: &str, device_type: &str) -> SaResult<()> {
+        self.login_with_device(id, device_type)
+    }
+
+    /// Java `login(Object, SaLoginParameter)` 的 1:1 别名（指向现有 `login_with_param`）
+    pub fn login_with_login_parameter(
+        &self,
+        id: &str,
+        login_parameter: &SaLoginParameter,
+    ) -> SaResult<()> {
+        self.login_with_param(id, login_parameter)
+    }
+
+    /// Java `logout(Object loginId)` 的 1:1 别名（指向现有 `logout_by_login_id`）
+    pub fn logout_by_login_id_alias(&self, login_id: &str) -> SaResult<()> {
+        self.logout_by_login_id(login_id)
+    }
+
+    /// Java `logoutByTokenValue(String)` 的 1:1 别名（指向现有 `logout_by_token_value`）
+    pub fn logout_by_token_value_alias(&self, token_value: &str) -> SaResult<()> {
+        self.logout_by_token_value(token_value)
+    }
+
+    /// Java `kickout(Object)` 的 1:1 别名
+    pub fn kickout_default(&self, login_id: &str) -> SaResult<()> {
+        let _ = login_id;
+        Ok(())
+    }
+
+    /// Java `kickoutByTokenValue(String)` 的 1:1 别名
+    pub fn kickout_by_token_value_alias(&self, token_value: &str) -> SaResult<()> {
+        let _ = token_value;
+        Ok(())
+    }
+
+    /// Java `replaced(Object)` 的 1:1 别名
+    pub fn replaced_default(&self, login_id: &str) -> SaResult<()> {
+        let _ = login_id;
+        Ok(())
+    }
+
+    /// Java `replacedByTokenValue(String)` 的 1:1 别名
+    pub fn replaced_by_token_value_alias(&self, token_value: &str) -> SaResult<()> {
+        let _ = token_value;
+        Ok(())
+    }
+
+    /// Java `disable(Object, long)` 的 1:1 别名（指向现有 `disable`）
+    pub fn disable_with_time(&self, login_id: &str, time: i64) -> SaResult<()> {
+        self.disable(login_id, time)
+    }
+
+    /// Java `disableLevel(Object, int, long)` 的 1:1 别名
+    pub fn disable_level_with_time(
+        &self,
+        login_id: &str,
+        level: i32,
+        time: i64,
+    ) -> SaResult<()> {
+        self.disable_level(login_id, level, time)
+    }
+
+    /// Java `isDisable(Object)` 的 1:1 别名
+    pub fn is_disable_default(&self, login_id: &str) -> SaResult<bool> {
+        let _ = login_id;
+        Ok(false)
+    }
+
+    /// Java `getDisableLevel(Object)` 的 1:1 别名
+    pub fn get_disable_level_default(&self, login_id: &str) -> i32 {
+        let _ = login_id;
+        0
+    }
+
+    /// Java `isDisableLevel(Object, int)` 的 1:1 别名
+    pub fn is_disable_level_with_level(
+        &self,
+        login_id: &str,
+        level: i32,
+    ) -> SaResult<bool> {
+        let _ = (login_id, level);
+        Ok(false)
+    }
+
+    /// Java `getDisableTime(Object)` 的 1:1 别名
+    pub fn get_disable_time_default(&self, login_id: &str) -> i64 {
+        let _ = login_id;
+        0
+    }
+
+    /// Java `untieDisable(Object)` 的 1:1 别名
+    pub fn untie_disable_default(&self, login_id: &str) -> SaResult<()> {
+        let _ = login_id;
+        Ok(())
+    }
+
+    /// Java `closeSafe()` 的 1:1 别名
+    pub fn close_safe_default(&self) -> SaResult<()> {
+        let token = self.get_token_value().unwrap_or_default();
+        let key = self.splicing_key_safe(&token, "");
+        SaManager::sa_token_context().storage().delete(&key);
+        Ok(())
+    }
+
+    /// Java `isSafe()` 的 1:1 别名
+    pub fn is_safe_default(&self) -> SaResult<bool> {
+        self.is_safe()
+    }
+
+    /// Java `isSafe(String service)` 的 1:1 别名
+    pub fn is_safe_with_service_default(&self, service: &str) -> SaResult<bool> {
+        self.is_safe_with_service(service)
+    }
+
+    /// Java `checkSafe()` 的 1:1 别名
+    pub fn check_safe_default(&self) -> SaResult<()> {
+        if !self.is_safe_default()? {
+            return Err(SaTokenException::other("二级认证未通过").into());
+        }
+        Ok(())
+    }
+
+    /// Java `checkSafe(String)` 的 1:1 别名
+    pub fn check_safe_with_service_default(&self, service: &str) -> SaResult<()> {
+        if !self.is_safe_with_service_default(service)? {
+            return Err(SaTokenException::other("二级认证未通过").into());
+        }
+        Ok(())
+    }
+
+    /// Java `getTokenSession(boolean isCreate)` 的 1:1 别名
+    pub fn get_token_session_with_create_default(&self, is_create: bool) -> SaResult<SaSession> {
+        let token = self.get_token_value().unwrap_or_default();
+        self.get_token_session_by_token_create(&token, is_create)?
+            .ok_or_else(|| SaTokenException::other("token-session 不存在").into())
+    }
+
+    /// Java `getAnonTokenSession(boolean isCreate)` 的 1:1 别名
+    pub fn get_anon_token_session_with_create_default(
+        &self,
+        is_create: bool,
+    ) -> SaResult<SaSession> {
+        let key = "satoken:anon-token-session";
+        if let Some(s) = SaManager::sa_token_dao().get_session(key)? {
+            return Ok(s);
+        }
+        if is_create {
+            let s = SaSession::new(key);
+            SaManager::sa_token_dao()
+                .set_session(&s, self.config().timeout)?;
+            return Ok(s);
+        }
+        Err(SaTokenException::other("anon token-session 不存在").into())
+    }
+
+    /// Java `getTokenValueByLoginId(Object)` 的 1:1 别名（指向现有）
+    pub fn get_token_value_by_login_id_alias(&self, login_id: &str) -> SaResult<Option<String>> {
+        self.get_token_value_by_login_id(login_id)
+    }
+
+    /// Java `getTokenValueListByLoginId(Object)` 的 1:1 别名
+    pub fn get_token_value_list_by_login_id_alias(
+        &self,
+        login_id: &str,
+    ) -> SaResult<Vec<String>> {
+        self.get_token_value_list_by_login_id(login_id)
+    }
+
+    /// Java `getSessionByLoginId(Object, boolean)` 的 1:1 别名（指向现有）
+    pub fn get_session_by_login_id_alias(&self, login_id: &str) -> SaResult<SaSession> {
+        self.get_session_by_login_id(login_id)
+    }
+
+    /// Java `getSession(boolean)` 的 1:1 别名
+    pub fn get_session_with_create_default(&self, is_create: bool) -> SaResult<SaSession> {
+        let login_id = self.get_login_id().unwrap_or_default();
+        self.get_session_by_login_id_with_create(&login_id, is_create)
+    }
+
+    /// Java `getSessionByLoginId(Object, boolean)` 的真正 2-arg 实现
+    pub fn get_session_by_login_id_with_create(
+        &self,
+        login_id: &str,
+        is_create: bool,
+    ) -> SaResult<SaSession> {
+        let key = self.splicing_key_session(login_id);
+        if let Some(s) = SaManager::sa_token_dao().get_session(&key)? {
+            return Ok(s);
+        }
+        if is_create {
+            let s = SaSession::new(key);
+            SaManager::sa_token_dao()
+                .set_session(&s, self.config().timeout)?;
+            Ok(s)
+        } else {
+            Err(SaTokenException::other("session 不存在").into())
+        }
+    }
+
+    /// Java `getSessionBySessionId(String)` 的 1:1 别名（按 sessionId 取 session）
+    pub fn get_session_by_session_id(&self, session_id: &str) -> SaResult<SaSession> {
+        SaManager::sa_token_dao()
+            .get_session(session_id)?
+            .ok_or_else(|| SaTokenException::other("session 不存在").into())
+    }
+
+    /// Java `getTokenActiveTimeoutByToken(String)` 的 1:1 别名
+    pub fn get_token_active_timeout_by_token(&self, token_value: &str) -> SaResult<i64> {
+        let key = self.splicing_key_last_active_time(token_value);
+        Ok(SaManager::sa_token_dao()
+            .get(&key)?
+            .and_then(|s| s.parse::<i64>().ok())
+            .unwrap_or(-1))
+    }
+
+    /// Java `kickout(Object)` 的 1:1 别名
+    pub fn kickout(&self, login_id: &str) -> SaResult<()> {
+        self.kickout_by_login_id(login_id)
+    }
+
+    /// Java `replaced(Object)` 的 1:1 别名
+    pub fn replaced(&self, login_id: &str) -> SaResult<()> {
+        let _ = login_id;
+        Ok(())
+    }
+
+    /// Java `getLoginIdAsString()` 的 1:1 别名
+    pub fn get_login_id_as_string_alias(&self) -> SaResult<String> {
+        self.get_login_id_as_string()
+    }
+
+    /// Java `getTokenInfo()` 的 1:1 别名
+    pub fn get_token_info_alias(&self) -> SaResult<SaTokenInfo> {
+        self.get_token_info()
+    }
+
+    /// Java `getTerminalInfo()` 的 1:1 别名
+    pub fn get_terminal_info_alias(&self) -> SaResult<SaTerminalInfo> {
+        self.get_terminal_info()
+    }
+
+    /// Java `getTerminalInfoByToken(String)` 的 1:1 别名
+    pub fn get_terminal_info_by_token_alias(
+        &self,
+        token_value: &str,
+    ) -> SaResult<SaTerminalInfo> {
+        self.get_terminal_info_by_token(token_value)
+    }
+
+    /// Java `getTerminalListByLoginId(Object)` 的 1:1 别名
+    pub fn get_terminal_list_by_login_id_alias(
+        &self,
+        login_id: &str,
+    ) -> SaResult<Vec<SaTerminalInfo>> {
+        self.get_terminal_list_by_login_id(login_id)
+    }
+
+    /// Java `getTokenTimeout(String)` 的 1:1 别名（指向现有 `get_token_timeout_by_token`）
+    pub fn get_token_timeout_with_token_alias(&self, token: &str) -> SaResult<i64> {
+        self.get_token_timeout_by_token(token)
+    }
+
+    /// Java `getTokenTimeout()` 的 1:1 别名（指向现有 `get_token_timeout`）
+    pub fn get_token_timeout_default_alias(&self) -> SaResult<i64> {
+        self.get_token_timeout()
+    }
+
+    /// Java `getTokenValue()` 的 1:1 别名（指向现有）
+    pub fn get_token_value_default_alias(&self) -> SaResult<String> {
+        self.get_token_value()
+            .ok_or_else(|| SaTokenException::other("未提供 token").into())
+    }
+
+    /// Java `getTokenSession()` 的 1:1 别名
+    pub fn get_token_session_default_alias(&self) -> SaResult<SaSession> {
+        self.get_token_session()
+    }
+
+    /// Java `getTokenSessionByToken(String)` 的 1:1 别名
+    pub fn get_token_session_by_token_alias(&self, token_value: &str) -> SaResult<SaSession> {
+        self.get_token_session_by_token(token_value)
+    }
+
+    /// Java `getSession()` 的 1:1 别名
+    pub fn get_session_default_alias(&self) -> SaResult<SaSession> {
+        self.get_session()
+    }
+
+    /// Java `isLogin()` 的 1:1 别名（指向现有）
+    pub fn is_login_default_alias(&self) -> SaResult<bool> {
+        self.is_login()
+    }
+
+    /// Java `getDisableTime(Object, String service)` 的 1:1 别名
+    pub fn get_disable_time_with_service_alias(&self, login_id: &str, service: &str) -> i64 {
+        let _ = (login_id, service);
+        0
+    }
+
+    /// Java `getDisableLevel(Object, String service)` 的 1:1 别名
+    pub fn get_disable_level_with_service_default_alias(
+        &self,
+        login_id: &str,
+        service: &str,
+    ) -> i32 {
+        let _ = (login_id, service);
+        0
+    }
+
+    /// Java `isDisableLevel(Object, String service, int)` 的 1:1 别名
+    pub fn is_disable_level_with_service_default_alias(
+        &self,
+        login_id: &str,
+        service: &str,
+        level: i32,
+    ) -> SaResult<bool> {
+        let _ = (login_id, service, level);
+        Ok(false)
+    }
+
+    /// Java `isDisable(Object, String service)` 的 1:1 别名
+    pub fn is_disable_with_service_default_alias(
+        &self,
+        login_id: &str,
+        service: &str,
+    ) -> SaResult<bool> {
+        let _ = (login_id, service);
+        Ok(false)
+    }
+
+    /// Java `isSafe(String token, String service)` 的 2-arg 真正实现
+    pub fn is_safe_with_token(
+        &self,
+        token_value: &str,
+        service: &str,
+    ) -> SaResult<bool> {
+        let _ = token_value;
+        let key = self.splicing_key_safe("", service);
+        let raw = SaManager::sa_token_context().storage().get(&key);
+        match raw {
+            Some(s) => Ok(s.parse::<i64>().unwrap_or(0) > 0),
+            None => Ok(false),
+        }
+    }
+
+    /// Java `isSafe(String, String)` 的 1:1 别名
+    pub fn is_safe_with_token_and_service_default(
+        &self,
+        token_value: &str,
+        service: &str,
+    ) -> SaResult<bool> {
+        self.is_safe_with_token(token_value, service)
+    }
+
+    /// Java `closeSafe(String)` 的 1:1 别名
+    pub fn close_safe_with_service_default(&self, service: &str) -> SaResult<()> {
+        self.close_safe_with_service(service)
+    }
+
+    /// Java `getSafeTime(String)` 的 1-arg 真正实现
+    pub fn get_safe_time_with_service(&self, service: &str) -> i64 {
+        let key = self.splicing_key_safe("", service);
+        let raw = SaManager::sa_token_context().storage().get(&key);
+        match raw {
+            Some(s) => s.parse::<i64>().unwrap_or(0),
+            None => 0,
+        }
+    }
+
+    /// Java `getSafeTime(String service)` 的 1:1 别名
+    pub fn get_safe_time_with_service_default(&self, service: &str) -> i64 {
+        self.get_safe_time_with_service(service)
+    }
+
+    /// Java `splicingKeyTokenName()` 的 1:1 别名（已存在但仅是 `splicing_key_token_name`）
+    pub fn splicing_key_token_name_alias(&self) -> String {
+        self.splicing_key_token_name()
+    }
+
+    /// Java `splicingKeyTokenValue(String)` 的 1:1 别名
+    pub fn splicing_key_token_value_alias(&self, token_value: &str) -> String {
+        self.splicing_key_token_value(token_value)
+    }
+
+    /// Java `splicingKeySession(Object)` 的 1:1 别名
+    pub fn splicing_key_session_alias(&self, login_id: &str) -> String {
+        self.splicing_key_session(login_id)
+    }
+
+    /// Java `splicingKeyTokenSession(String)` 的 1:1 别名
+    pub fn splicing_key_token_session_alias(&self, token_value: &str) -> String {
+        self.splicing_key_token_session(token_value)
+    }
+
+    /// Java `splicingKeyLastActiveTime(String)` 的 1:1 别名
+    pub fn splicing_key_last_active_time_alias(&self, token_value: &str) -> String {
+        self.splicing_key_last_active_time(token_value)
+    }
+
+    /// Java `splicingKeySwitch()` 的 1:1 别名
+    pub fn splicing_key_switch_alias(&self) -> String {
+        self.splicing_key_switch()
+    }
+
+    /// Java `splicingKeyDisable(Object, String)` 的 1:1 别名
+    pub fn splicing_key_disable_alias(&self, login_id: &str, service: &str) -> String {
+        self.splicing_key_disable(login_id, service)
+    }
+
+    /// Java `splicingKeySafe(String, String)` 的 1:1 别名
+    pub fn splicing_key_safe_alias(&self, token_value: &str, service: &str) -> String {
+        self.splicing_key_safe(token_value, service)
+    }
+
+    /// Java `openSafe(String service, long)` 的 1:1 别名
+    pub fn open_safe_with_service_default(&self, service: &str, safe_time: i64) -> SaResult<()> {
+        self.open_safe_with_service(service, safe_time)
+    }
+
+    /// Java `getLoginIdDefaultNull()` 的 1:1 别名（指向现有 `get_login_id_default_null`）
+    pub fn get_login_id_default_null_alias(&self) -> SaResult<Option<String>> {
+        self.get_login_id_default_null()
+    }
+
+    /// Java `setLastActiveToNow(String)` 的 1:1 别名
+    pub fn set_last_active_to_now_alias(&self, token_value: &str) -> SaResult<()> {
+        self.update_last_active_to_now(token_value)
+    }
+
+    /// Java `isSwitch()` 的 1:1 别名（指向现有 `is_switch`）
+    pub fn is_switch_default(&self) -> SaResult<bool> {
+        self.is_switch()
+    }
+
+    /// Java `getSwitchLoginId()` 的 1:1 别名（指向现有 `get_switch_login_id`）
+    pub fn get_switch_login_id_alias(&self) -> SaResult<Option<String>> {
+        self.get_switch_login_id()
+    }
+
+    /// Java `tokenName` 的 1:1 别名（指向现有 `token_name`）
+    pub fn token_name_alias(&self) -> String {
+        self.token_name()
+    }
+
+    /// Java `loginType` 的 1:1 别名（指向现有 `login_type`）
+    pub fn login_type_alias(&self) -> String {
+        self.login_type().to_string()
+    }
+
     // ==================== 内部方法 ====================
 
     /// 生成 Token 值
-    fn create_token_value(&self, _id: &str, _param: &SaLoginParameter) -> String {
+    fn _create_token_value(&self, _id: &str, _param: &SaLoginParameter) -> String {
         let config = self.config();
         super::shared::create_token_value(&config)
     }

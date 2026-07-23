@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-repository = "https://github.com/dromara/sa-token-rs"
+repository = "https://github.com/easy-4-rust/sa-token-rs"
 description = "Tera template dialect plugin for sa-token-rs (maps Java sa-token-freemarker)"
 
 [dependencies]

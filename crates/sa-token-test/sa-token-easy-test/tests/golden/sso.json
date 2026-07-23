@@ -1,0 +1,16 @@
+{
+  "source_commit": "902886c2149261ccb53a9c982068b7ccd0990237",
+  "sso_api_check_ticket": "/sso/checkTicket",
+  "sso_client_auth_url": "/sso/auth",
+  "sso_client_is_http": false,
+  "sso_client_is_slo": true,
+  "sso_client_wildcard": "*",
+  "sso_encoded_back_url": "https://client.example/sso/login?back=%2Fhome%3Fa%3D1",
+  "sso_last_error_code": 30024,
+  "sso_param_secretkey": "secretkey",
+  "sso_server_auth_url": "https://sso.example/sso/auth?client=app-a&redirect=https://client.example/sso/login?back=%2Fhome%3Fa%3D1",
+  "sso_server_max_reg_client": 32,
+  "sso_server_ticket_timeout": 300,
+  "sso_ticket_index_key": "satoken:ticket-index:anon:10001",
+  "sso_ticket_key": "satoken:ticket:TICKET"
+}

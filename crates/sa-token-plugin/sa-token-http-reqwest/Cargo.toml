@@ -1,0 +1,19 @@
+[package]
+name = "sa-token-http-reqwest"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "reqwest HTTP client middleware for sa-token-rs (Java sa-token-forest / sa-token-okhttps equivalent)"
+
+[dependencies]
+sa-token-core.workspace = true
+sa-token-context-mock.workspace = true
+reqwest = { workspace = true, default-features = false, features = ["json", "rustls-tls"] }
+tokio = { workspace = true, features = ["sync"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[lints]
+workspace = true

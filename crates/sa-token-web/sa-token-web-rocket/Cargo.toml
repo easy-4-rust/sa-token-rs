@@ -1,0 +1,15 @@
+[package]
+name = "sa-token-web-rocket"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Rocket web framework adapter for sa-token-rs"
+
+[dependencies]
+sa-token-core.workspace = true
+sa-token-context-mock.workspace = true
+async-trait.workspace = true
+
+[lints]
+workspace = true

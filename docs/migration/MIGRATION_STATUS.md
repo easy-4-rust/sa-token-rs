@@ -1,6 +1,7 @@
 # Sa-Token-Rs 迁移状态
 
 > 本文档追踪 Sa-Token Java → Sa-Token-Rs 的迁移进度，按 Phase 划分。
+> 仓库地址：<https://github.com/easy-4-rust/sa-token-rs>
 > 参考 easyexcel-rs 的 `MIGRATION_STATUS.md` 组织方式。
 
 ---
@@ -9,13 +10,16 @@
 
 | Phase | 名称 | 状态 | 目标时间 | 已实现方法数 |
 |---|---|---|---|---|
-| Phase 0 | 基础设施（workspace/骨架） | ⬜ 未开始 | 第 1 天 | — |
-| Phase 1 | MVP 核心（登录/会话/Token） | ⬜ 未开始 | 2~3 周 | ~80 |
-| Phase 2 | 权限/角色/注解宏 | ⬜ 未开始 | +2 周 | ~70 |
-| Phase 3 | Web 框架适配 | ⬜ 未开始 | +2 周 | — |
-| Phase 4 | 存储扩展 | ⬜ 未开始 | +1 周 | — |
-| Phase 5 | 插件生态 | ⬜ 未开始 | +4 周 | ~200 |
-| Phase 6 | 示例/文档/测试 | ⬜ 未开始 | +2 周 | — |
+| Phase 0 | 基础设施（workspace/骨架） | ✅ 完成 | 第 1 天 | 全部 |
+| Phase 1 | MVP 核心（登录/会话/Token） | ✅ 完成 | 2~3 周 | 80/80 |
+| Phase 2 | 权限/角色/注解宏 | ✅ 完成 | +2 周 | 70/70 |
+| Phase 3 | Web 框架适配 | ✅ 完成（axum/actix/salvo） | +2 周 | 三套 |
+| Phase 4 | 存储扩展 | 🟡 部分（Redis 完成，moka/postgres 等未来） | +1 周 | Redis 已上 |
+| Phase 5 | 插件生态 | 🟡 部分（JWT/Sign/SSO/OAuth2/API Key 已完成，OAuth2 parity 收尾） | +4 周 | 200+/200 |
+| Phase 6 | 示例/文档/测试 | 🟡 进行中 | +2 周 | — |
+
+> 数字口径以 [docs/IMPLEMENTATION_PLAN.md §2](../IMPLEMENTATION_PLAN.md) 与 [docs/QUALITY_AUDIT.md](../QUALITY_AUDIT.md) 为准。
+> 截至最近一次审计：881 个业务文件映射中 `complete = 173/881`，`in_progress = 118/881`，`planned = 549/881`。
 
 ---
 
@@ -308,11 +312,18 @@ Phase 3~6 的详细方法矩阵将在对应 Phase 启动时补充。
 
 | 指标 | 数值 |
 |---|---|
+| Java production 文件 | 895 |
+| 排除项（`package-info.java`） | 14 |
+| 有效映射 | 881 |
+| 已完成（`complete`） | **173** |
+| 进行中（`in_progress`） | 118 |
+| 待规划（`planned`） | 549 |
 | Java StpLogic public 方法总数 | ~196 |
 | Phase 1 已规划方法数 | ~80 |
 | Phase 2 已规划方法数 | ~70 |
 | Phase 1+2 总计已规划 | ~150 |
 | 剩余（Phase 5 插件等） | ~200+ |
+| 测试用例（截至最近一次审计） | **172 passed / 0 failed** |
 
 ---
 
@@ -320,4 +331,4 @@ Phase 3~6 的详细方法矩阵将在对应 Phase 启动时补充。
 
 - [IMPLEMENTATION_PLAN.md](../IMPLEMENTATION_PLAN.md) - 完整实施计划
 - [object-method-matrix.md](./object-method-matrix.md) - 方法级对照表
-- **easyexcel-rs 迁移状态**：`/Users/wandl/workspaces/workspace-github/easyexcel-rs/docs/migration/MIGRATION_STATUS.md`
+- **easyexcel-rs 迁移状态**：<https://github.com/easy-4-rust/easyexcel-rs/blob/main/docs/migration/MIGRATION_STATUS.md>

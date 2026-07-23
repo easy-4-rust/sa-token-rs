@@ -1,0 +1,17 @@
+[package]
+name = "sa-token-remember-me"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Remember-me plugin for sa-token-rs (Java sa-token-demo-remember-me-server equivalent)"
+
+[dependencies]
+sa-token-core.workspace = true
+sa-token-context-mock.workspace = true
+async-trait.workspace = true
+serde_json.workspace = true
+chrono = { version = "0.4", features = ["serde"] }
+
+[lints]
+workspace = true

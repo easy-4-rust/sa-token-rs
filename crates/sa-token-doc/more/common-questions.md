@@ -413,16 +413,16 @@ Caused by: java.lang.ClassNotFoundException: cn.dev33.satoken.same.SaSameTemplat
 比如说你如果一个依赖是 1.32.0，一个是 1.31.0，就会造成无法启动：
 
 ``` xml
-<!-- 如下样例：一个是 `1.32.0`，一个是 `1.31.0`， 版本没对齐，就会造成项目无法启动 -->
+<!-- 如下样例：一个是 `<!-- 1.32.0 -->`，一个是 `<!-- 1.31.0 -->`， 版本没对齐，就会造成项目无法启动 -->
 <dependency>
 	<groupId>cn.dev33</groupId>
 	<artifactId>sa-token-spring-boot-starter</artifactId>
-	<version>1.32.0</version>
+	<version><!-- 1.32.0 --></version>
 </dependency>
 <dependency>
 	<groupId>cn.dev33</groupId>
 	<artifactId>sa-token-core</artifactId>
-	<version>1.31.0</version>
+	<version><!-- 1.31.0 --></version>
 </dependency>
 ```
 

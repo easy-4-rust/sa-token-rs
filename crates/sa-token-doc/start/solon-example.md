@@ -1,108 +1,119 @@
-# Solon 集成 Sa-Token 示例
+# actix-web 集成 Sa-Token-Rs 示例
 
-本篇介绍在 Solon 应用中如何集成 Sa-Token。
+> Java 原文对应：`Solon 集成 Sa-Token 示例`  
+> 框架映射：**Solon / Quarkus → actix-web**（`sa-token-web-actix`）
 
-整合示例在官方仓库的 `/sa-token-demo/sa-token-demo-solon` 文件夹下，如遇到难点可结合源码进行学习测试。[Sa-Token 集成示例大全下载](/more/download-demos) 。
+本篇介绍在 actix-web 应用中如何集成 Sa-Token-Rs。
 
-> [!tip| label:Solon 是什么？] 
-> Solon 是一个高效的国产应用开发框架：更快、更小、更简单。
-> 
-> - 启动快 5 ～ 10 倍；
-> - qps 高 2～ 3 倍；
-> - 运行时内存节省 1/3 ~ 1/2；
-> - 打包可以缩到 1/2 ~ 1/10；
-> - 同时支持 jdk8、jdk11、jdk17、jdk20。
-> 
-> 详情可参考：[https://solon.noear.org/](https://solon.noear.org/)
+整合示例在官方仓库的 `crates/sa-token-demo/sa-token-demo-actix-web` 文件夹下，如遇到难点可结合源码进行学习测试。[Sa-Token-Rs 集成示例大全](/more/download-demos) 。
+
+| Java | Rust |
+|---|---|
+| Solon | actix-web |
+| `sa-token-solon-plugin` | `sa-token-web-actix` |
+| `@SolonMain` | `#[actix_web::main]` |
+| `@Mapping` / `@Controller` | `web::scope` + handler |
+
+> [!tip| label:为什么是 actix-web？]
+> Java 文档中 Solon 定位为轻量、高性能 Web 框架。Rust 侧与之对应的常用选择是 **actix-web**（另一主流为 axum，见 [axum 集成](/start/example)）。
+>
+> - 成熟的 actor / 异步模型；
+> - 丰富的中间件生态；
+> - 与 `AsyncStpUtil` 配合良好。
+>
+> Java Solon 官网仍可参考：[https://solon.noear.org/](https://solon.noear.org/)
 
 ---
 
 ### 1、创建项目
 
-在 IDE 中新建一个 Solon 项目，例如：sa-token-demo-solon （可以借助 [Solon Initializr](https://solon.noear.org/start/) 生成） 
+使用 Cargo 新建一个 actix-web 项目，例如：`sa-token-demo-actix-web`
+
+```bash
+cargo new sa-token-demo-actix-web --bin
+```
 
 ### 2、添加依赖
 
 在项目中添加依赖：
 
 <!---------------------------- tabs:start ---------------------------->
-<!-------- tab:Maven 方式 -------->
-``` xml 
-<!-- Sa-Token 权限认证，在线文档：https://sa-token.cc -->
+<!-------- tab:Cargo.toml -------->
+``` toml
+[dependencies]
+sa-token = "0.1"
+sa-token-web-actix = "0.1"
+actix-web = "4"
+tokio = { version = "1", features = ["full"] }
+serde_json = "1"
+```
+
+<!-------- tab:Java 对照（Maven） -------->
+``` xml
+<!-- 以下为 Java 原版，仅作对照 -->
 <dependency>
     <groupId>cn.dev33</groupId>
     <artifactId>sa-token-solon-plugin</artifactId>
     <version>${sa.top.version}</version>
 </dependency>
 ```
-
-<!-------- tab:Gradle 方式 -------->
-``` gradle
-// Sa-Token 权限认证，在线文档：https://sa-token.cc
-implementation 'cn.dev33:sa-token-solon-plugin:${sa.top.version}'
-```
 <!---------------------------- tabs:end ---------------------------->
 
 
 
-Maven依赖一直无法加载成功？[参考解决方案](https://sa-token.cc/doc.html#/start/maven-pull)
+Cargo 依赖一直无法加载成功？[参考解决方案](/start/maven-pull)
 
-更多内测版本了解：[Sa-Token最新版本](https://gitee.com/dromara/sa-token/blob/dev/sa-token-doc/start/new-version.md)
+更多内测版本了解：[Sa-Token-Rs 最新版本](/start/new-version.md)
 
 
 
-### 3、设置配置文件
+### 3、设置配置
 
-你可以**零配置启动项目** ，但同时你也可以在 `app.yml` 中增加如下配置，定制性使用框架：
+你可以**零配置启动项目**，但同时你也可以在代码中定制 `SaTokenConfig`（对应 Java `app.yml` 中的 `sa-token.*`）：
 
 <!---------------------------- tabs:start ---------------------------->
 
-<!------------- tab:app.yml 风格  ------------->
+<!------------- tab:Rust 代码配置  ------------->
+
+``` rust
+use std::sync::Arc;
+use sa_token::prelude::{AsyncSaTokenRuntime, AsyncStpUtil, SaTokenConfig, SaTokenDaoMemory};
+use sa_token_core::context::sa_token_context_default_impl::SaTokenContextDefaultImpl;
+
+/// 构建 AsyncStpUtil（actix demo 常用异步门面）
+fn build_stp_util() -> AsyncStpUtil {
+    let runtime = AsyncSaTokenRuntime::new(
+        Arc::new(SaTokenConfig {
+            token_name: "satoken".into(),
+            timeout: 2_592_000,
+            active_timeout: -1,
+            is_concurrent: true,
+            is_share: false,
+            is_log: true,
+            ..Default::default()
+        }),
+        Arc::new(SaTokenDaoMemory::new()),
+        Arc::new(SaTokenContextDefaultImpl),
+    );
+    AsyncStpUtil::new("login", Arc::new(runtime))
+}
+```
+
+<!------------- tab:YAML 语义对照（Java app.yml）  ------------->
 
 ```yaml
 server:
-    # 端口
     port: 8081
-    
-############## Sa-Token 配置 (文档: https://sa-token.cc) ##############
-sa-token: 
-	# token 名称（同时也是 cookie 名称）
+
+############## Sa-Token 配置语义对照 ##############
+sa-token:
 	token-name: satoken
-	# token 有效期（单位：秒） 默认30天，-1 代表永久有效
 	timeout: 2592000
-	# token 最低活跃频率（单位：秒），如果 token 超过此时间没有访问系统就会被冻结，默认-1 代表不限制，永不冻结
 	active-timeout: -1
-	# 是否允许同一账号多地同时登录 （为 true 时允许一起登录, 为 false 时新登录挤掉旧登录）
 	is-concurrent: true
-	# 在多人登录同一账号时，是否共用一个 token （为 true 时所有登录共用一个 token, 为 false 时每次登录新建一个 token）
 	is-share: false
-	# token 风格（默认可取值：uuid、simple-uuid、random-32、random-64、random-128、tik）
 	token-style: uuid
-	# 是否输出操作日志 
 	is-log: true
-```
-
-<!------------- tab:app.properties 风格  ------------->
-```properties
-# 端口
-server.port=8081
-    
-############## Sa-Token 配置 (文档: https://sa-token.cc) ##############
-
-# token 名称（同时也是 cookie 名称）
-sa-token.token-name=satoken
-# token 有效期（单位：秒） 默认30天，-1 代表永久有效
-sa-token.timeout=2592000
-# token 最低活跃频率（单位：秒），如果 token 超过此时间没有访问系统就会被冻结，默认-1 代表不限制，永不冻结
-sa-token.active-timeout=-1
-# 是否允许同一账号多地同时登录 （为 true 时允许一起登录, 为 false 时新登录挤掉旧登录）
-sa-token.is-concurrent=true
-# 在多人登录同一账号时，是否共用一个 token （为 true 时所有登录共用一个 token, 为 false 时每次登录新建一个 token）
-sa-token.is-share=false
-# token 风格（默认可取值：uuid、simple-uuid、random-32、random-64、random-128、tik）
-sa-token.token-style=uuid
-# 是否输出操作日志 
-sa-token.is-log=true
 ```
 
 <!---------------------------- tabs:end ---------------------------->
@@ -110,50 +121,71 @@ sa-token.is-log=true
 
 
 
-### 4、创建启动类
+### 4、创建启动入口
 
-在项目中新建包 `com.pj` ，在此包内新建主类 `SaTokenDemoApp.java`，复制以下代码：
+``` rust
+use actix_web::{web, App, HttpServer};
+use sa_token_web_actix::require_login;
+use actix_web::middleware::from_fn;
 
-```java
-@SolonMain
-public class SaTokenDemoApp {
-    public static void main(String[] args) {
-        Solon.start(SaTokenDemoApp.class, args);
-        System.out.println("启动成功，Sa-Token 配置如下：" + SaManager.getConfig());
-    }
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    let util = build_stp_util();
+    println!("启动成功，Sa-Token-Rs actix 示例");
+
+    HttpServer::new(move || {
+        App::new()
+            .app_data(web::Data::new(util.clone()))
+            .route("/user/doLogin", web::get().to(do_login))
+            .route("/user/isLogin", web::get().to(is_login))
+            // 需登录接口可包一层 require_login
+            // .service(web::scope("/user").wrap(from_fn(require_login)).route(...))
+    })
+    .bind(("0.0.0.0", 8081))?
+    .run()
+    .await
 }
 ```
 
-### 5、创建测试Controller
+### 5、创建测试 Handler（对应 Controller）
 
-```java
-@Mapping("/user/")
-@Controller
-public class UserController {
+``` rust
+use actix_web::{web, HttpResponse};
+use sa_token::prelude::AsyncStpUtil;
+use std::collections::HashMap;
 
-    // 测试登录，浏览器访问： http://localhost:8081/user/doLogin?username=zhang&password=123456
-    @Mapping("doLogin")
-    public String doLogin(String username, String password) {
-        // 此处仅作模拟示例，真实项目需要从数据库中查询数据进行比对 
-        if("zhang".equals(username) && "123456".equals(password)) {
-            StpUtil.login(10001);
-            return "登录成功";
+// 测试登录，浏览器访问： http://localhost:8081/user/doLogin?username=zhang&password=123456
+async fn do_login(
+    util: web::Data<AsyncStpUtil>,
+    query: web::Query<HashMap<String, String>>,
+) -> HttpResponse {
+    let username = query.get("username").map(|s| s.as_str()).unwrap_or("");
+    let password = query.get("password").map(|s| s.as_str()).unwrap_or("");
+    // 此处仅作模拟示例，真实项目需要从数据库中查询数据进行比对
+    if username == "zhang" && password == "123456" {
+        match util.login("10001").await {
+            Ok(_) => HttpResponse::Ok().body("登录成功"),
+            Err(e) => HttpResponse::Unauthorized().body(e.to_string()),
         }
-        return "登录失败";
+    } else {
+        HttpResponse::Ok().body("登录失败")
     }
+}
 
-    // 查询登录状态，浏览器访问： http://localhost:8081/user/isLogin
-    @Mapping("isLogin")
-    public String isLogin() {
-        return "当前会话是否登录：" + StpUtil.isLogin();
-    }
-    
+// 查询登录状态，浏览器访问： http://localhost:8081/user/isLogin
+async fn is_login(util: web::Data<AsyncStpUtil>) -> HttpResponse {
+    let logged_in = util.is_login().await.unwrap_or(false);
+    HttpResponse::Ok().body(format!("当前会话是否登录：{logged_in}"))
 }
 ```
 
 ### 6、运行
 
-启动代码，从浏览器依次访问上述测试接口：
+```bash
+cargo run -p sa-token-demo-actix-web
+```
+
+从浏览器依次访问上述测试接口：
 
 <img src="/big-file/doc/start/test-do-login.png" alt="运行结果">
 
@@ -163,11 +195,6 @@ public class UserController {
 
 ### 详细了解
 
-通过这个示例，你已经对 Sa-Token 有了初步的了解，那么现在开始详细了解一下它都有哪些吧：
+通过这个示例，你已经对 Sa-Token-Rs 有了初步的了解，那么现在开始详细了解一下它都有哪些吧：
 
-[登录认证](/use/login-auth) (与 Springboot 处理类似)
-
-
-
-
-
+[登录认证](/use/login-auth) (与 axum 处理类似)

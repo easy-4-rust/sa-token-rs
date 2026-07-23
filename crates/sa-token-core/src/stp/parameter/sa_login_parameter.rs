@@ -85,6 +85,12 @@ impl SaLoginParameter {
         self
     }
 
+    /// 设置 Cookie 超时时间（Java 1:1 setCookieTimeout(int) 别名）
+    pub fn set_cookie_timeout(mut self, cookie_timeout: i32) -> Self {
+        self.timeout = cookie_timeout as i64;
+        self
+    }
+
     /// 设置活跃超时
     pub fn set_active_timeout(mut self, active_timeout: i64) -> Self {
         self.active_timeout = Some(active_timeout);

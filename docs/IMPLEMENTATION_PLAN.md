@@ -1,5 +1,10 @@
 # Sa-Token 全量 Rust 迁移实施计划
 
+> 本计划针对的目标产物是 **Sa-Token-Rs**，仓库地址：
+> <https://github.com/easy-4-rust/sa-token-rs>
+>
+> 下文所说的"Java 仓库"仅作为迁移源参考。
+
 ## 1. 固定基线与统计口径
 
 - Java 仓库：`/Users/wandl/workspaces/workspace-github/Sa-Token`

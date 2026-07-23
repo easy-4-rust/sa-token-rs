@@ -16,6 +16,7 @@ syn.workspace = true
 
 [dev-dependencies]
 sa-token-core.workspace = true
+sa-token-derive = { workspace = true }
 
 [lints]
 workspace = true

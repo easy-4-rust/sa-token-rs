@@ -192,11 +192,6 @@ impl SaTokenConfig {
     }
 
     /// 获取 Same-Token 超时时间
-    pub fn get_same_token_timeout(&self) -> i64 {
-        self.same_token_timeout
-    }
-
-    /// 设置 Same-Token 超时时间
     pub fn set_same_token_timeout(&mut self, timeout: i64) {
         self.same_token_timeout = timeout;
     }
@@ -343,5 +338,355 @@ impl SaTokenConfig {
         } else {
             -1
         }
+    }
+
+    // ----------------------------------------------------------------
+    // M1.1: Java `SaTokenConfig` getter / setter 1:1 parity.
+    // Names are snake_cased versions of the Java camelCase names so that
+    // e.g. Java `getIsConcurrent()` -> `get_is_concurrent()`. Each method
+    // is documented with the original Chinese javadoc, which doubles as
+    // the canonical description of the field it touches.
+    // ----------------------------------------------------------------
+
+    /// 是否启用动态 activeTimeout 功能，如不需要请设置为 false，节省缓存请求次数
+    pub fn get_dynamic_active_timeout(&self) -> bool {
+        self.dynamic_active_timeout
+    }
+
+    /// 设置 dynamicActiveTimeout
+    pub fn set_dynamic_active_timeout(&mut self, value: bool) -> &mut Self {
+        self.dynamic_active_timeout = value;
+        self
+    }
+
+    /// 在多人登录同一账号时，是否共用一个 token（对应 Java `getIsShare`）
+    pub fn get_is_share(&self) -> bool {
+        self.is_share
+    }
+
+    /// 设置 isShare（返回 `&mut Self` 以镜像 Java builder 语义）
+    pub fn set_is_share_via_builder(&mut self, value: bool) -> &mut Self {
+        self.is_share = value;
+        self
+    }
+
+    /// 在 isConcurrent=false 时，决定新旧设备谁将放弃会话（OLD_DEVICE / NEW_DEVICE）
+    pub fn get_replaced_login_exit_mode(&self) -> SaReplacedLoginExitMode {
+        self.replaced_login_exit_mode
+    }
+
+    /// 设置 replacedLoginExitMode
+    pub fn set_replaced_login_exit_mode(&mut self, value: SaReplacedLoginExitMode) -> &mut Self {
+        self.replaced_login_exit_mode = value;
+        self
+    }
+
+    /// 在 isConcurrent=false 时，顶人下线的范围（CURR_DEVICE_TYPE / ALL_DEVICE_TYPE）
+    pub fn get_replaced_range(&self) -> SaReplacedRange {
+        self.replaced_range
+    }
+
+    /// 设置 replacedRange
+    pub fn set_replaced_range(&mut self, value: SaReplacedRange) -> &mut Self {
+        self.replaced_range = value;
+        self
+    }
+
+    /// 同一账号最大登录数量，-1 代表不限（只有在 isConcurrent=true, isShare=false 时此配置项才有意义）
+    pub fn get_max_login_count(&self) -> i32 {
+        self.max_login_count
+    }
+
+    /// 溢出 maxLoginCount 的客户端，将以何种方式注销下线（LOGOUT / KICKOUT / REPLACED）
+    pub fn get_overflow_logout_mode(&self) -> SaLogoutMode {
+        self.overflow_logout_mode
+    }
+
+    /// 设置 overflowLogoutMode
+    pub fn set_overflow_logout_mode(&mut self, value: SaLogoutMode) -> &mut Self {
+        self.overflow_logout_mode = value;
+        self
+    }
+
+    /// 在每次创建 token 时的最高循环次数（-1=不循环尝试，直接使用）
+    pub fn get_max_try_times(&self) -> i32 {
+        self.max_try_times
+    }
+
+    /// 设置 maxTryTimes
+    pub fn set_max_try_times(&mut self, value: i32) -> &mut Self {
+        self.max_try_times = value;
+        self
+    }
+
+    /// 是否尝试从请求体里读取 token
+    pub fn get_is_read_body(&self) -> bool {
+        self.is_read_body
+    }
+
+    /// 设置 isReadBody
+    pub fn set_is_read_body(&mut self, value: bool) -> &mut Self {
+        self.is_read_body = value;
+        self
+    }
+
+    /// 是否尝试从 header 里读取 token
+    pub fn get_is_read_header(&self) -> bool {
+        self.is_read_header
+    }
+
+    /// 设置 isReadHeader
+    pub fn set_is_read_header(&mut self, value: bool) -> &mut Self {
+        self.is_read_header = value;
+        self
+    }
+
+    /// 是否尝试从 cookie 里读取 token（Java `getIsReadCookie`）
+    pub fn get_is_read_cookie(&self) -> bool {
+        self.is_read_cookie
+    }
+
+    /// 设置 isReadCookie
+    pub fn set_is_read_cookie(&mut self, value: bool) -> &mut Self {
+        self.is_read_cookie = value;
+        self
+    }
+
+    /// 是否为持久 Cookie（Java `getIsLastingCookie`）
+    pub fn get_is_lasting_cookie(&self) -> bool {
+        self.is_lasting_cookie
+    }
+
+    /// 设置 isLastingCookie
+    pub fn set_is_lasting_cookie_via_builder(&mut self, value: bool) -> &mut Self {
+        self.is_lasting_cookie = value;
+        self
+    }
+
+    /// 是否在登录后将 token 写入到响应头（Java `getIsWriteHeader`）
+    pub fn get_is_write_header(&self) -> bool {
+        self.is_write_header
+    }
+
+    /// 注销范围（Java `getLogoutRange`）
+    pub fn get_logout_range(&self) -> SaLogoutRange {
+        self.logout_range
+    }
+
+    /// 设置 logoutRange
+    pub fn set_logout_range(&mut self, value: SaLogoutRange) -> &mut Self {
+        self.logout_range = value;
+        self
+    }
+
+    /// 如果 token 已被冻结，是否保留其操作权（Java `getIsLogoutKeepFreezeOps`）
+    pub fn get_is_logout_keep_freeze_ops(&self) -> bool {
+        self.is_logout_keep_freeze_ops
+    }
+
+    /// 设置 isLogoutKeepFreezeOps
+    pub fn set_is_logout_keep_freeze_ops(&mut self, value: bool) -> &mut Self {
+        self.is_logout_keep_freeze_ops = value;
+        self
+    }
+
+    /// 在注销 token 后，是否保留其对应的 Token-Session（Java `getIsLogoutKeepTokenSession`）
+    pub fn get_is_logout_keep_token_session(&self) -> bool {
+        self.is_logout_keep_token_session
+    }
+
+    /// 设置 isLogoutKeepTokenSession
+    pub fn set_is_logout_keep_token_session(&mut self, value: bool) -> &mut Self {
+        self.is_logout_keep_token_session = value;
+        self
+    }
+
+    /// 在登录时，是否立即创建对应的 Token-Session（Java `getRightNowCreateTokenSession`）
+    pub fn get_right_now_create_token_session(&self) -> bool {
+        self.right_now_create_token_session
+    }
+
+    /// 设置 rightNowCreateTokenSession
+    pub fn set_right_now_create_token_session(&mut self, value: bool) -> &mut Self {
+        self.right_now_create_token_session = value;
+        self
+    }
+
+    /// token 风格（Java `getTokenStyle`）
+    pub fn get_token_style(&self) -> &SaTokenStyle {
+        &self.token_style
+    }
+
+    /// 默认 SaTokenDao 实现类中，每次清理过期数据间隔的时间（Java `getDataRefreshPeriod`）
+    pub fn get_data_refresh_period(&self) -> i32 {
+        self.data_refresh_period
+    }
+
+    /// 设置 dataRefreshPeriod
+    pub fn set_data_refresh_period(&mut self, value: i32) -> &mut Self {
+        self.data_refresh_period = value;
+        self
+    }
+
+    /// 获取 Token-Session 时是否必须登录（Java `getTokenSessionCheckLogin`）
+    pub fn get_token_session_check_login(&self) -> bool {
+        self.token_session_check_login
+    }
+
+    /// 设置 tokenSessionCheckLogin
+    pub fn set_token_session_check_login(&mut self, value: bool) -> &mut Self {
+        self.token_session_check_login = value;
+        self
+    }
+
+    /// 是否打开自动续签 activeTimeout（Java `getAutoRenew`）
+    pub fn get_auto_renew(&self) -> bool {
+        self.auto_renew
+    }
+
+    /// 设置 autoRenew
+    pub fn set_auto_renew(&mut self, value: bool) -> &mut Self {
+        self.auto_renew = value;
+        self
+    }
+
+    /// token 前缀（Java `getTokenPrefix`）
+    pub fn get_token_prefix(&self) -> &str {
+        &self.token_prefix
+    }
+
+    /// cookie 模式是否自动填充 token 前缀（Java `getCookieAutoFillPrefix`）
+    pub fn get_cookie_auto_fill_prefix(&self) -> bool {
+        self.cookie_auto_fill_prefix
+    }
+
+    /// 设置 cookieAutoFillPrefix
+    pub fn set_cookie_auto_fill_prefix(&mut self, value: bool) -> &mut Self {
+        self.cookie_auto_fill_prefix = value;
+        self
+    }
+
+    /// 是否在初始化配置时在控制台打印版本字符画（Java `getIsPrint`）
+    pub fn get_is_print(&self) -> bool {
+        self.is_print
+    }
+
+    /// 设置 isPrint
+    pub fn set_is_print(&mut self, value: bool) -> &mut Self {
+        self.is_print = value;
+        self
+    }
+
+    /// 是否打印操作日志（Java `getIsLog`）
+    pub fn get_is_log(&self) -> bool {
+        self.is_log
+    }
+
+    /// 设置 isLog
+    pub fn set_is_log_via_builder(&mut self, value: bool) -> &mut Self {
+        self.is_log = value;
+        self
+    }
+
+    /// 日志等级（Java `getLogLevel`）
+    pub fn get_log_level(&self) -> &str {
+        &self.log_level
+    }
+
+    /// 日志等级 int 值（Java `getLogLevelInt`）
+    pub fn get_log_level_int(&self) -> i32 {
+        self.log_level_int
+    }
+
+    /// 设置 logLevel；同时按 Java `SaFoxUtil.translateLogLevelToInt` 联动 logLevelInt
+    pub fn set_log_level(&mut self, level: impl Into<String>) -> &mut Self {
+        let level = level.into();
+        self.log_level = level.clone();
+        self.log_level_int = crate::config::log_level_coupling::translate_log_level_to_int(&level);
+        self
+    }
+
+    /// 设置 logLevelInt；同时按 Java `SaFoxUtil.translateLogLevelToString` 联动 logLevel
+    pub fn set_log_level_int(&mut self, level_int: i32) -> &mut Self {
+        self.log_level_int = level_int;
+        self.log_level =
+            crate::config::log_level_coupling::translate_log_level_to_string(level_int).to_owned();
+        self
+    }
+
+    /// 是否打印彩色日志（Java `getIsColorLog`，可为 null）
+    pub fn get_is_color_log(&self) -> Option<bool> {
+        self.is_color_log
+    }
+
+    /// 设置 isColorLog（接受 `Option<bool>` 以镜像 Java `Boolean` 可空性）
+    pub fn set_is_color_log(&mut self, value: Option<bool>) -> &mut Self {
+        self.is_color_log = value;
+        self
+    }
+
+    /// jwt 秘钥（Java `getJwtSecretKey`）
+    pub fn get_jwt_secret_key(&self) -> &str {
+        &self.jwt_secret_key
+    }
+
+    /// Http Basic 认证的默认账号和密码（Java `getHttpBasic`）
+    pub fn get_http_basic(&self) -> &str {
+        &self.http_basic
+    }
+
+    /// 设置 httpBasic
+    pub fn set_http_basic(&mut self, value: impl Into<String>) -> &mut Self {
+        self.http_basic = value.into();
+        self
+    }
+
+    /// Http Digest 认证的默认账号和密码（Java `getHttpDigest`）
+    pub fn get_http_digest(&self) -> &str {
+        &self.http_digest
+    }
+
+    /// 设置 httpDigest
+    pub fn set_http_digest(&mut self, value: impl Into<String>) -> &mut Self {
+        self.http_digest = value.into();
+        self
+    }
+
+    /// 配置当前项目的网络访问地址（Java `getCurrDomain`，可为 null）
+    pub fn get_curr_domain(&self) -> Option<&str> {
+        self.curr_domain.as_deref()
+    }
+
+    /// 设置 currDomain（接受 `Option<String>` 以镜像 Java 字段可空性）
+    pub fn set_curr_domain(&mut self, value: Option<String>) -> &mut Self {
+        self.curr_domain = value;
+        self
+    }
+
+    /// Same-Token 的有效期（Java `getSameTokenTimeout`，单位：秒）
+    pub fn get_same_token_timeout(&self) -> i64 {
+        self.same_token_timeout
+    }
+
+    /// 是否校验 Same-Token（Java `getCheckSameToken`）
+    pub fn get_check_same_token(&self) -> bool {
+        self.check_same_token
+    }
+
+    /// 设置 checkSameToken
+    pub fn set_check_same_token(&mut self, value: bool) -> &mut Self {
+        self.check_same_token = value;
+        self
+    }
+
+    /// SaCookieConfig 引用（Java `getCookie`）
+    pub fn get_cookie(&self) -> &SaCookieConfig {
+        &self.cookie
+    }
+
+    /// 设置 cookie（返回 `&mut Self` 以镜像 Java builder）
+    pub fn set_cookie_via_builder(&mut self, cookie: SaCookieConfig) -> &mut Self {
+        self.cookie = cookie;
+        self
     }
 }

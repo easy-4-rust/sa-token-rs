@@ -1,0 +1,4 @@
+{
+  "jwt_hs256_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOjEwMDAxLCJkZXZpY2VUeXBlIjoid2ViIiwiZWZmIjotMSwicm5TdHIiOiIwMTIzNDU2Nzg5YWJjZGVmMDEyMzQ1Njc4OWFiY2RlZiJ9.AGFioFzA3UtpZmH3hwogsZF0avq6ItxvDQB4obVm9s0",
+  "source_commit": "902886c2149261ccb53a9c982068b7ccd0990237"
+}

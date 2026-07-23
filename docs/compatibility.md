@@ -67,6 +67,38 @@
 | Session 数据 | `Map<String, Object>` | **`HashMap<String, serde_json::Value>`** |
 | 泛型擦除 | 运行时擦除 | **编译期单态化** |
 
+**Java 类型访问示例：**
+
+```java
+// Object 类型强转
+Integer id = (Integer) StpUtil.getLoginId();
+String idStr = (String) StpUtil.getLoginId();
+
+// Session 数据按类型反序列化
+session.set("user", userObject);
+User user = session.getModel("user", User.class);  // Sa-Token 内置反序列化
+```
+
+**Sa-Token-Rs 反序列化示例：**
+
+```rust
+// loginId 一律 String
+let id: String = StpUtil::get_login_id()?;
+
+// Session 数据用 serde_json::from_value 反序列化
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize)]
+struct User { id: u32, name: String }
+
+let session = StpUtil::get_session()?;
+session.set("user", serde_json::json!({"id": 10001, "name": "Alice"}));
+
+let user: Option<User> = session
+    .get("user")
+    .and_then(|v| serde_json::from_value(v).ok());
+```
+
 **迁移影响**：
 - Java `StpUtil.login(10001)` → Rust `StpUtil::login("10001")`（数字需转字符串）
 - Java `session.get("key", User.class)` → Rust `session.get("key").and_then(|v| serde_json::from_value(v).ok())`
@@ -170,6 +202,84 @@ Sa-Token-Rs 的 Redis 数据格式与 Java 版**完全兼容**，可直接读写
 |---|---|
 | `auth_hash_enabled` | 是否启用 auth_hash 踢下线（Rust 增强） |
 | `redis_pubsub_enabled` | 是否启用 Redis Pub/Sub 实时踢下线推送 |
+
+### 5.3 Java application.yml ↔ Rust config.toml 配置对照
+
+**Java application.yml：**
+
+```yaml
+sa-token:
+  token-name: satoken
+  token-prefix: ''
+  token-style: uuid
+  timeout: 2592000
+  active-timeout: -1
+  is-concurrent: true
+  is-share: true
+  max-login-count: 12
+  is-read-cookie: true
+  is-read-header: true
+  is-read-body: true
+  is-lasting-cookie: true
+  is-log: true
+  is-print: false
+  is-write-header: true
+  jwt:
+    secret-key: my-secret-key
+    algorithm: HS256
+    issuer: sa-token-rs
+```
+
+**Sa-Token-Rs config.toml（等价）：**
+
+```toml
+[sa_token]
+token_name = "satoken"
+token_prefix = ""
+token_style = "uuid"
+timeout = 2592000
+active_timeout = -1
+is_concurrent = true
+is_share = true
+max_login_count = 12
+is_read_cookie = true
+is_read_header = true
+is_read_body = true
+is_lasting_cookie = true
+is_log = true
+is_print = false
+is_write_header = true
+
+[sa_token.jwt]
+secret_key = "my-secret-key"
+algorithm = "HS256"
+issuer = "sa-token-rs"
+```
+
+**字段名映射：**
+
+| Java | Rust | 说明 |
+|---|---|---|
+| `token-name` | `token_name` | kebab-case → snake_case |
+| `is-concurrent` | `is_concurrent` | 保留 `is_` 前缀 |
+| `max-login-count` | `max_login_count` | 数值类型 |
+| `jwt.secret-key` | `jwt.secret_key` | 嵌套表用 `.` 分隔 |
+| `is-write-header` | `is_write_header` | — |
+
+**Rust 加载方式：**
+
+```rust
+use sa_token::prelude::*;
+use sa_token::config::SaTokenConfig;
+use sa_token::SaManager;
+use std::sync::Arc;
+
+let text = std::fs::read_to_string("config.toml")?;
+let cfg: SaTokenConfig = toml::from_str(&text)?;
+SaManager::set_config(Arc::new(cfg));
+```
+
+> **YAML 支持**：Sa-Token-Rs 不内置 `serde_yaml`，但因 `SaTokenConfig` 实现 `Deserialize`，加上 `serde_yaml` crate 后可用 `serde_yaml::from_str` 直接解析。
 
 ---
 

@@ -311,6 +311,10 @@ impl SaTokenException {
     }
 
     /// 创建阶梯封禁异常（对应 Java `DisableServiceException` + `CODE_11061`）
+    ///
+    /// 与 [`SaTokenException::disable_service`] 不同：阶梯封禁必须携带 `level` 与
+    /// `limit_level` 概念，因此用 `Framework` 变体以保存 Java 风格的详细 code
+    /// 字段，便于上游通过 `code()` 判定具体错误码。
     pub fn disable_service_level(
         login_id: impl Into<String>,
         service: impl Into<String>,

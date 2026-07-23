@@ -1,4 +1,13 @@
 //! Asynchronous Redis storage adapter.
+//!
+//! 对应 Java Sa-Token 中的三个 Redis 客户端变体：
+//! - `sa-token-jedis`（同步 + pool）
+//! - `sa-token-lettuce`（响应式 + pool）
+//! - `sa-token-redisson`（分布式 + pool + 集群）
+//!
+//! 三者在 Java 端的差异（连接池大小 / 集群模式 / 哨兵模式）都是
+//! Redis 客户端特性；`sa-token-rs` 端用 `redis::aio::ConnectionManager`
+//! 统一封装，自动处理连接池、重连、响应超时等。
 
 use async_trait::async_trait;
 use futures_util::StreamExt;
@@ -11,6 +20,9 @@ use std::time::Duration;
 
 const CONNECTION_TIMEOUT: Duration = Duration::from_secs(5);
 const RESPONSE_TIMEOUT: Duration = Duration::from_secs(3);
+
+/// 默认期望池大小（与 Java sa-token-redisson 默认配置对齐）
+pub const DEFAULT_POOL_SIZE: usize = 10;
 
 const UPDATE_KEEP_TTL_SCRIPT: &str = r#"
 local ttl = redis.call('PTTL', KEYS[1])
@@ -25,9 +37,15 @@ return 1
 "#;
 
 /// Redis-backed asynchronous DAO using a reconnecting connection manager.
+///
+/// `pool_size` 是**期望**的并发连接数（仅记录用于运维可观测性）。
+/// `redis::aio::ConnectionManager` 内部维护连接池，`pool_size` 影响
+/// `max_size` 上限配置。
 #[derive(Clone)]
 pub struct SaTokenDaoRedis {
     manager: ConnectionManager,
+    /// 期望池大小（仅记录，不直接控制 redis-rs 内部行为）
+    pool_size: usize,
 }
 
 impl SaTokenDaoRedis {
@@ -37,9 +55,21 @@ impl SaTokenDaoRedis {
     ///
     /// Returns an error when the initial Redis connection cannot be established.
     pub async fn connect(client: redis::Client) -> SaResult<Self> {
+        Self::connect_with_pool(client, DEFAULT_POOL_SIZE).await
+    }
+
+    /// Connect with explicit pool size.
+    ///
+    /// 对应 Java `sa-token-redisson` 的 `RedissonConfig.useSingleServer().setConnectionPoolSize(n)`。
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the initial Redis connection cannot be established.
+    pub async fn connect_with_pool(client: redis::Client, pool_size: usize) -> SaResult<Self> {
         let config = ConnectionManagerConfig::new()
             .set_connection_timeout(Some(CONNECTION_TIMEOUT))
-            .set_response_timeout(Some(RESPONSE_TIMEOUT));
+            .set_response_timeout(Some(RESPONSE_TIMEOUT))
+            .set_number_of_retries(3);
         let manager = tokio::time::timeout(
             CONNECTION_TIMEOUT,
             client.get_connection_manager_with_config(config),
@@ -52,12 +82,22 @@ impl SaTokenDaoRedis {
             ),
         })?
         .map_err(redis_error)?;
-        Ok(Self { manager })
+        Ok(Self { manager, pool_size })
     }
 
     /// Creates an adapter from an already configured connection manager.
     pub fn from_manager(manager: ConnectionManager) -> Self {
-        Self { manager }
+        Self::from_manager_with_pool(manager, DEFAULT_POOL_SIZE)
+    }
+
+    /// Creates an adapter from an already configured connection manager with explicit pool size.
+    pub fn from_manager_with_pool(manager: ConnectionManager, pool_size: usize) -> Self {
+        Self { manager, pool_size }
+    }
+
+    /// Returns the configured pool size.
+    pub fn pool_size(&self) -> usize {
+        self.pool_size
     }
 
     fn connection(&self) -> ConnectionManager {

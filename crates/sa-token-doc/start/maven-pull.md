@@ -1,49 +1,70 @@
-# Maven 依赖一直无法拉取成功？
+# Cargo 依赖一直无法拉取成功？
 
---- 
-方法1、先重启一下试试。
+> Java 原文标题：`Maven 依赖一直无法拉取成功？`  
+> 工具映射：**Maven → Cargo**
 
---- 
-方法2、可能依赖还没有下载完毕，请看一下编辑器下方是否有正在构建项目的进度条。
+---
+方法1、先重启一下试试（IDE / 终端 / `cargo` 相关进程）。
 
---- 
-方法3、可能是网络不太稳定，导致本地下载了一些残碎文件，先把这些残碎文件删除了，再重新构建项目试试。
+---
+方法2、可能依赖还没有下载完毕，请看一下终端是否有正在 `Downloading` / `Compiling` 的进度输出。
 
-一般本地的文件都在 `C:\Users\你的电脑用户名\.m2\repository\cn\dev33`，打开后，把文件全部删除。注：如果你修改过 Maven jar 下载目录，就按照你修改的来。
+---
+方法3、可能是网络不太稳定，导致本地下载了一些残碎文件，先把这些残碎缓存删了，再重新构建项目试试。
 
---- 
-方法4、可能你给你的 Maven 配置了阿里云镜像，而部分 jar 包无法通过阿里云镜像加载成功。
+一般本地的 Cargo 缓存目录：
+- macOS / Linux：`~/.cargo/registry/`
+- 也可清理指定 crate：删除 `~/.cargo/registry/src/` 与 `~/.cargo/registry/cache/` 下相关目录后重试。
 
-打开你的 Maven setting.xml 文件，看看有没有以下配置：
+然后执行：
 
-``` xml
-<mirror>
-	<id>nexus-aliyun</id>
-	<mirrorOf>central</mirrorOf>
-	<name>Nexus aliyun</name>
-	<url>http://maven.aliyun.com/nexus/content/groups/public</url> 
-</mirror>
+```bash
+cargo clean
+cargo fetch
+cargo check -p sa-token
 ```
 
-如果有的话，先把它注释掉（注释掉就直连 Maven 中央仓库了），或者修改为其它的镜像，例如腾讯云的：
+---
+方法4、可能你给 Cargo 配置了镜像，而部分 crate 无法通过该镜像加载成功。
 
-``` xml
-<mirror> 
-	<id>tencent</id> 
-	<name>tencent maven</name> 
-	<url>http://mirrors.cloud.tencent.com/nexus/repository/maven-public/</url>
-	<mirrorOf>central</mirrorOf> 
-</mirror>
+打开你的 `~/.cargo/config.toml`，看看有没有类似配置：
+
+``` toml
+[source.crates-io]
+replace-with = 'rsproxy'
+
+[source.rsproxy]
+registry = "https://rsproxy.cn/crates.io-index"
 ```
 
-然后重启你的代码编辑器，重新构建项目。
+如果有的话，可以：
+1. 先注释掉镜像，直连 crates.io；或
+2. 换成其它镜像（如 USTC、rsproxy 等）后再试。
 
---- --- 
-方法5、如果使用的是父子Maven项目，在父项目导入该依赖后,Pom无法识别的情况：
+然后重新执行：
 
-需要先在子项目中引用该依赖，再进行重新加载。
+```bash
+cargo fetch
+```
 
-若还是不行，可以新建先一个小的Maven项目尝试将该依赖下载后，再返回原父子项目中将该依赖导入。
+--- ---
+方法5、如果使用的是 Cargo workspace 父子项目，在根 `Cargo.toml` 声明依赖后，成员无法识别：
 
---- --- 
-再不行的话，就加群反馈吧。
+需要确认：
+1. 成员 `Cargo.toml` 中使用 `xxx.workspace = true` 或显式 `path` / `version`；
+2. 根目录 `[workspace.dependencies]` 已正确声明；
+3. 执行 `cargo check -p <member>` 重新解析。
+
+若还是不行，可以新建一个最小二进制 crate 单独引入 `sa-token` 验证网络与版本，再回到原 workspace。
+
+--- ---
+再不行的话，就加群反馈吧（见 [加入讨论群](/more/join-group)）。
+
+### Java ↔ Rust 对照
+
+| Java / Maven | Rust / Cargo |
+|---|---|
+| `~/.m2/repository` | `~/.cargo/registry` |
+| `mvn clean install` | `cargo clean && cargo build` |
+| `settings.xml` mirror | `~/.cargo/config.toml` source replace |
+| 父子 POM | Cargo workspace |
